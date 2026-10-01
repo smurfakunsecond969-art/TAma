@@ -16,11 +16,39 @@ export const AppProvider = ({ children }) => {
   // dapat menunda update setToasts jika ada render prioritas lebih tinggi.
   const [, startTransition] = useTransition();
 
-  // State in-memory: menandai apakah LandingPage sudah pernah ditampilkan.
-  // Bisa di-mount ulang dari rute lain (mis. dari /login kembali ke Beranda)
-  // tanpa loading screen berulang. Akan reset saat aplikasi di-reload penuh.
   const [landingSeen, setLandingSeen] = useState(false);
   const markLandingSeen = useCallback(() => setLandingSeen(true), []);
+
+  // Theme state: light / dark
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('tmk_theme') || 'light';
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', saved);
+      document.body.setAttribute('data-theme', saved);
+    }
+    return saved;
+  });
+
+  const toggleTheme = useCallback((targetTheme = null) => {
+    setTheme((prev) => {
+      const isExplicit = typeof targetTheme === 'string' && (targetTheme === 'light' || targetTheme === 'dark');
+      const nextTheme = isExplicit ? targetTheme : (prev === 'dark' ? 'light' : 'dark');
+      localStorage.setItem('tmk_theme', nextTheme);
+      if (typeof document !== 'undefined') {
+        document.documentElement.setAttribute('data-theme', nextTheme);
+        document.body.setAttribute('data-theme', nextTheme);
+      }
+      return nextTheme;
+    });
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('tmk_theme', theme);
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.body.setAttribute('data-theme', theme);
+    }
+  }, [theme]);
 
   // Worker/admin: ID user yang sedang dikelola (null = diri sendiri untuk role user)
   const [selectedManagedUserId, setSelectedManagedUserId] = useState(null);
@@ -151,9 +179,11 @@ export const AppProvider = ({ children }) => {
     setSelectedManagedUserId,
     landingSeen,
     markLandingSeen,
+    theme,
+    toggleTheme,
   }), [
     user, plants, loggedIn, toasts, authLoading, plantsLoading,
-    selectedManagedUserId, landingSeen,
+    selectedManagedUserId, landingSeen, theme, toggleTheme,
     showToast, loginUser, logoutUser, updatePlant, loadPlants, markLandingSeen,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 

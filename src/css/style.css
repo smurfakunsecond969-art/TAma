@@ -94,9 +94,10 @@
 }
 
 /* Dark Mode ("Kebun Malam")
-   ── Terisolasi di dalam .app-shell (dashboard/Layout saja).
-   Landing page, Login, Register tetap light mode karena tidak ada .app-shell
-   dan atribut global <html> tidak pernah diubah. */
+   ── Mendukung global html/body dan komponen terisolasi */
+:root[data-theme="dark"],
+html[data-theme="dark"],
+body[data-theme="dark"],
 .app-shell[data-theme="dark"] {
   --color-white:   #15241f;
   --color-surface: #0a1410;
@@ -125,15 +126,16 @@
   --color-primary-light: #1e8f68;
 
   /* Glow Elevation - Pendaran Cahaya Hijau Lembut */
-  --shadow-xs:  0 1px 3px rgba(29,158,117,0.15);
-  --shadow-sm:  0 2px 10px rgba(29,158,117,0.2);
-  --shadow-md:  0 4px 22px rgba(29,158,117,0.25);
-  --shadow-lg:  0 8px 45px rgba(29,158,117,0.3);
-  --shadow-xl:  0 20px 65px rgba(29,158,117,0.35);
+  --shadow-xs:  0 1px 3px rgba(0,0,0,0.35);
+  --shadow-sm:  0 2px 10px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 22px rgba(0,0,0,0.45);
+  --shadow-lg:  0 8px 45px rgba(0,0,0,0.5);
+  --shadow-xl:  0 20px 65px rgba(0,0,0,0.6);
 }
 
 /* Badge yellow memakai warna tersendiri yang gelap — di dark mode
    pakaikan var(--color-warning) cerah agar tetap terbaca. */
+[data-theme="dark"] .badge-yellow,
 .app-shell[data-theme="dark"] .badge-yellow {
   color: var(--color-warning);
 }
@@ -141,6 +143,11 @@
 /* Permukaan hijau berteks putih: karena --color-primary-dark dicerahkan
    untuk teks, ujung gradien ini dijaga tetap gelap agar teks putih tetap
    kontras (kartu form, header profil, tombol/logo hijau, FAB). */
+[data-theme="dark"] .form-card-header,
+[data-theme="dark"] .profile-card-top,
+[data-theme="dark"] .btn-water-now,
+[data-theme="dark"] .sidebar-logo-mark,
+[data-theme="dark"] .fab,
 .app-shell[data-theme="dark"] .form-card-header,
 .app-shell[data-theme="dark"] .profile-card-top,
 .app-shell[data-theme="dark"] .btn-water-now,

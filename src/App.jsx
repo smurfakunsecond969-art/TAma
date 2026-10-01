@@ -12,6 +12,7 @@ const RegisterPage       = lazy(() => import('./pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const DashboardPage      = lazy(() => import('./pages/DashboardPage'));
 const GardenOverviewPage = lazy(() => import('./pages/GardenOverviewPage'));
+const GardenAnalyticsPage = lazy(() => import('./pages/GardenAnalyticsPage'));
 const PlantDetailPage    = lazy(() => import('./pages/PlantDetailPage'));
 const HistoryPage        = lazy(() => import('./pages/HistoryPage'));
 const ManagePlantsPage   = lazy(() => import('./pages/ManagePlantsPage'));
@@ -63,6 +64,14 @@ export default function App() {
               element={
                 <AuthGuard>
                   <GardenOverviewPage />
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/garden-analytics"
+              element={
+                <AuthGuard>
+                  <GardenAnalyticsPage />
                 </AuthGuard>
               }
             />

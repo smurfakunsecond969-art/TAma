@@ -1683,3 +1683,243 @@ input[type="range"]::-webkit-slider-thumb:hover {
   box-shadow: 0 2px 12px rgba(255,140,0,0.5);
   pointer-events: none; z-index: 11;
 }
+
+/* ============================================================
+   LUXURY DYNAMIC MICRO-INTERACTIONS & MOTION (Aplikasi Mahal)
+   ============================================================ */
+
+/* 1. Breathing Glow & Floating Animations */
+@keyframes floatSubtle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+@keyframes pulseGlowEmerald {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(29, 158, 117, 0.25);
+  }
+  50% {
+    box-shadow: 0 8px 30px rgba(29, 158, 117, 0.45);
+  }
+}
+
+@keyframes shimmerWave {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes radarPing {
+  0%   { transform: scale(0.95); opacity: 0.8; }
+  70%  { transform: scale(1.4);  opacity: 0; }
+  100% { transform: scale(1.4);  opacity: 0; }
+}
+
+/* 2. Interactive Plant Card & Summary Lift */
+.plant-card {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease, border-color 0.3s ease !important;
+}
+
+.plant-card:hover {
+  transform: translateY(-5px) scale(1.015) !important;
+  box-shadow: 0 16px 36px rgba(15, 110, 86, 0.14) !important;
+  border-color: rgba(29, 158, 117, 0.4) !important;
+}
+
+.app-shell[data-theme="dark"] .plant-card:hover {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(29, 158, 117, 0.25) !important;
+  border-color: rgba(79, 214, 164, 0.4) !important;
+}
+
+/* Dynamic Live Pulse Indicator on Active IoT */
+.badge-live-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.badge-live-pulse::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary, #1D9E75);
+  display: inline-block;
+  animation: radarPing 1.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+/* 3. Dark Mode Comprehensive Theme Support */
+[data-theme="dark"] .summary-card,
+.app-shell[data-theme="dark"] .summary-card {
+  background: var(--color-card, #111e19);
+  border-color: var(--color-border-soft, #1b2f28);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .summary-card:hover,
+.app-shell[data-theme="dark"] .summary-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(29, 158, 117, 0.2);
+}
+
+[data-theme="dark"] .plant-card,
+.app-shell[data-theme="dark"] .plant-card {
+  background: var(--color-card, #111e19) !important;
+  border-color: var(--color-border-soft, #1b2f28) !important;
+  color: var(--color-text, #e2f0eb) !important;
+}
+
+[data-theme="dark"] .plant-moisture,
+.app-shell[data-theme="dark"] .plant-moisture {
+  background: rgba(20, 53, 42, 0.4);
+  border: 1px solid rgba(34, 58, 49, 0.6);
+}
+
+[data-theme="dark"] .modal-card,
+.app-shell[data-theme="dark"] .modal-card {
+  background: #111e19 !important;
+  border: 1px solid #223a31 !important;
+  color: #e2f0eb !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-select,
+.app-shell[data-theme="dark"] .form-input,
+.app-shell[data-theme="dark"] .form-select {
+  background: #0d1a15 !important;
+  border-color: #223a31 !important;
+  color: #e2f0eb !important;
+}
+
+[data-theme="dark"] .form-input:focus,
+[data-theme="dark"] .form-select:focus,
+.app-shell[data-theme="dark"] .form-input:focus,
+.app-shell[data-theme="dark"] .form-select:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.25) !important;
+}
+
+[data-theme="dark"] .empty-state,
+.app-shell[data-theme="dark"] .empty-state {
+  background: transparent;
+  color: #a3c2b7;
+}
+
+[data-theme="dark"] .app-header,
+.app-shell[data-theme="dark"] .app-header {
+  background: rgba(10, 20, 16, 0.88) !important;
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid #1b2f28 !important;
+}
+
+[data-theme="dark"] .sidebar,
+.app-shell[data-theme="dark"] .sidebar {
+  background: #0d1a15 !important;
+  border-right: 1px solid #1b2f28 !important;
+}
+
+[data-theme="dark"] .nav-link,
+.app-shell[data-theme="dark"] .nav-link {
+  color: #a3c2b7;
+}
+
+[data-theme="dark"] .nav-link:hover,
+.app-shell[data-theme="dark"] .nav-link:hover {
+  background: #14352a;
+  color: #e2f0eb;
+}
+
+[data-theme="dark"] .nav-link.active,
+.app-shell[data-theme="dark"] .nav-link.active {
+  background: linear-gradient(135deg, #1D9E75, #0F6E56) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(29, 158, 117, 0.35);
+}
+
+[data-theme="dark"] .bottom-nav,
+.app-shell[data-theme="dark"] .bottom-nav {
+  background: rgba(13, 26, 21, 0.95) !important;
+  border-top: 1px solid #1b2f28 !important;
+}
+
+[data-theme="dark"] .bottom-nav-item,
+.app-shell[data-theme="dark"] .bottom-nav-item {
+  color: #74968a;
+}
+
+[data-theme="dark"] .bottom-nav-item.active,
+.app-shell[data-theme="dark"] .bottom-nav-item.active {
+  color: #4fd6a4;
+}
+
+/* Glass & Hero Cards in Dark Mode */
+[data-theme="dark"] .hero-garden-card {
+  background: linear-gradient(135deg, #111e19 0%, #152b22 100%) !important;
+  border-color: #223a31 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .telemetry-card {
+  background: #0d1a15 !important;
+  border-color: #223a31 !important;
+}
+
+[data-theme="dark"] .segmented-filter-bar {
+  background: #0d1a15 !important;
+}
+
+[data-theme="dark"] .segmented-filter-btn.active {
+  background: #15241f !important;
+  color: #4fd6a4 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .segmented-filter-btn {
+  color: #a3c2b7 !important;
+}
+
+[data-theme="dark"] .plant-sub-box {
+  background: #0d1a15 !important;
+  border-color: #1b2f28 !important;
+}
+
+[data-theme="dark"] .chart-container-card {
+  background: #111e19 !important;
+  border-color: #223a31 !important;
+}
+
+[data-theme="dark"] .tab-btn-pill {
+  background: #0d1a15 !important;
+  border-color: #223a31 !important;
+  color: #a3c2b7 !important;
+}
+
+[data-theme="dark"] .tab-btn-pill.active {
+  background: linear-gradient(135deg, #1D9E75, #0F6E56) !important;
+  color: #ffffff !important;
+  border-color: #1D9E75 !important;
+}
+
+[data-theme="dark"] .detail-card,
+[data-theme="dark"] .info-card,
+[data-theme="dark"] .form-card {
+  background: var(--color-card, #111e19) !important;
+  border-color: var(--color-border-soft, #1b2f28) !important;
+}
+
+[data-theme="dark"] .data-table th {
+  background: #0d1a15 !important;
+  color: #a3c2b7 !important;
+  border-bottom-color: #223a31 !important;
+}
+
+[data-theme="dark"] .data-table td {
+  border-bottom-color: #1b2f28 !important;
+  color: #e2f0eb !important;
+}
+
+[data-theme="dark"] .data-table tr:hover td {
+  background: #142a22 !important;
+}
+

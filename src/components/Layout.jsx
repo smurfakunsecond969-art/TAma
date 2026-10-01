@@ -6,38 +6,13 @@ import LoadingScreen from './LoadingScreen';
 import NotificationPanel from './NotificationPanel';
 
 export default function Layout({ children, title }) {
-  const { user, plants, plantsLoading } = useApp();
+  const { user, plants, plantsLoading, theme, toggleTheme } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   // Dashboard punya Loading Screen full-screen sendiri → inline loader tidak perlu
   const inlineLoader = plantsLoading && plants.length === 0 && location.pathname !== '/dashboard';
-
-  // Theme state management
-  // Dark mode TERISOLASI di layout dashboard/sidebar (bukan <html> global)
-  // sehingga landing page & halaman auth tetap light mode.
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('tmk_theme') || 'light';
-  });
-
-  useEffect(() => {
-    // Pastikan atribut global pada <html> selalu dibersihkan supaya
-    // tidak bocor ke halaman non-dashboard (landing page, login, register).
-    document.documentElement.removeAttribute('data-theme');
-    localStorage.setItem('tmk_theme', theme);
-  }, [theme]);
-
-  // Bersihkan kembali saat komponen Layout di-unmount (logout / keluar dashboard)
-  useEffect(() => {
-    return () => {
-      document.documentElement.removeAttribute('data-theme');
-    };
-  }, []);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
 
   const warningCount = plants.filter((p) => p.status === 'warning').length;
   const initials = (user?.name || 'U').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -136,6 +111,21 @@ export default function Layout({ children, title }) {
               </NavLink>
             )}
 
+            {/* Analisis Kebun — hanya untuk user & admin */}
+            {(isUser || isAdmin) && (
+              <NavLink to="/garden-analytics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={close}>
+                <span className="nav-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                    <line x1="2" y1="20" x2="22" y2="20" />
+                  </svg>
+                </span>
+                Analisis Kebun
+              </NavLink>
+            )}
+
             <NavLink to="/history" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={close}>
               <span className="nav-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -145,11 +135,10 @@ export default function Layout({ children, title }) {
               Riwayat
             </NavLink>
 
+
             <NavLink to="/taku" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={close}>
-              <span className="nav-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
+              <span className="nav-icon" aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src="/taku-ai-logo.png" alt="Taku AI" style={{ width: '19px', height: '19px', objectFit: 'contain' }} />
               </span>
               Tanya Taku AI
             </NavLink>
@@ -231,14 +220,23 @@ export default function Layout({ children, title }) {
               )}
               
               {/* Theme Toggle Button */}
-              <button className="btn btn-ghost btn-icon theme-toggle-btn" aria-label="Ganti Tema" onClick={toggleTheme}>
+              <button
+                className="btn btn-ghost btn-icon theme-toggle-btn"
+                aria-label={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                title={theme === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap'}
+                onClick={() => toggleTheme()}
+                style={{
+                  transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease',
+                  color: theme === 'dark' ? '#F59E0B' : 'var(--color-text)',
+                }}
+              >
                 {theme === 'light' ? (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                   </svg>
                 ) : (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="5" />
+                    <circle cx="12" cy="12" r="5" fill="#F59E0B" />
                     <line x1="12" y1="1" x2="12" y2="3" />
                     <line x1="12" y1="21" x2="12" y2="23" />
                     <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />

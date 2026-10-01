@@ -99,7 +99,9 @@ export async function fetchPlantById(id) {
 
 // plantData harus include targetUserId untuk worker/admin
 export async function createPlantApi(plantData) {
-  const res = await fetch(`${API_BASE_URL}/plants`, {
+  const targetId = plantData?.userId || plantData?.targetUserId;
+  const url = targetId ? `${API_BASE_URL}/plants?userId=${targetId}` : `${API_BASE_URL}/plants`;
+  const res = await fetch(url, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(plantData),
@@ -340,5 +342,68 @@ export async function takuCommandApi(message, currentPage = '') {
   return data;
 }
 
+// ── Garden Analytics APIs ────────────────────────────────────
 
+/**
+ * Ambil skor kesehatan per tanaman + statistik penyakit
+ * period: 'day' | 'week' | 'month'
+ */
+export async function fetchGardenAnalyticsApi(period = 'week') {
+  const res = await fetch(`${API_BASE_URL}/ai/garden/analytics?period=${period}`, {
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Gagal mengambil data analisis kebun');
+  return data;
+}
 
+/**
+ * Ambil daftar tanaman yang butuh check-in (>6 jam belum di-handle)
+ */
+export async function fetchPendingCheckinApi() {
+  const res = await fetch(`${API_BASE_URL}/ai/treatment-logs/pending-checkin`, {
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Gagal mengambil data check-in');
+  return data;
+}
+
+/**
+ * Simpan catatan penanganan penyakit
+ */
+export async function saveTreatmentLogApi({ analysisId, plantId, treatmentText, scoreBefore }) {
+  const res = await fetch(`${API_BASE_URL}/ai/treatment-logs`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ analysisId, plantId, treatmentText, scoreBefore }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Gagal menyimpan catatan penanganan');
+  return data;
+}
+
+/**
+ * Tandai treatment log sebagai selesai
+ */
+export async function resolveCheckinApi(logId) {
+  const res = await fetch(`${API_BASE_URL}/ai/treatment-logs/${logId}/resolve`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Gagal menandai selesai');
+  return data;
+}
+
+/**
+ * Ambil riwayat treatment log untuk laporan historis
+ */
+export async function fetchTreatmentHistoryApi() {
+  const res = await fetch(`${API_BASE_URL}/ai/treatment-logs/history`, {
+    headers: authHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Gagal mengambil riwayat penanganan');
+  return data;
+}

@@ -10,7 +10,7 @@ import {
 import '../css/app.css';
 
 export default function HistoryPage() {
-  const { plants, showToast } = useApp();
+  const { plants, showToast, loadPlants } = useApp();
 
   const [activeTab, setActiveTab] = useState('irrigation'); // 'irrigation' | 'photos'
   const [selectedPlantId, setSelectedPlantId] = useState('all');
@@ -20,7 +20,8 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [photosLoading, setPhotosLoading] = useState(false);
 
-  // Live Camera state
+  // Live Camera & Plant Selection state
+  const [isSelectPlantModalOpen, setIsSelectPlantModalOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [targetPlantForCamera, setTargetPlantForCamera] = useState('');
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
@@ -31,9 +32,9 @@ export default function HistoryPage() {
     setLoading(true);
     try {
       const data = await fetchHistory(selectedPlantId, selectedType);
-      setLogs(data);
+      setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
-      showToast('Gagal memuat riwayat penyiraman', 'error');
+      console.warn('[HistoryPage] loadHistory warning:', err);
       setLogs([]);
     } finally {
       setLoading(false);
@@ -45,22 +46,20 @@ export default function HistoryPage() {
     setPhotosLoading(true);
     try {
       const data = await fetchPhotosHistoryApi(selectedPlantId);
-      setPhotosHistory(data || []);
+      setPhotosHistory(Array.isArray(data) ? data : []);
     } catch (err) {
-      showToast('Gagal memuat riwayat foto tanaman', 'error');
+      console.warn('[HistoryPage] loadPhotosHistory warning:', err);
       setPhotosHistory([]);
     } finally {
       setPhotosLoading(false);
     }
   };
 
+  // Muat riwayat penyiraman dan riwayat foto secara paralel agar data dan counter selalu sinkron
   useEffect(() => {
-    if (activeTab === 'irrigation') {
-      loadHistory();
-    } else {
-      loadPhotosHistory();
-    }
-  }, [selectedPlantId, selectedType, activeTab]);
+    loadHistory();
+    loadPhotosHistory();
+  }, [selectedPlantId, selectedType]);
 
   const totalCount = logs.length;
   const autoCount = logs.filter((l) => l.type === 'auto').length;
@@ -112,10 +111,31 @@ export default function HistoryPage() {
     return groups;
   };
 
+  // Buka popup pemilihan kepemilikan tanaman sebelum buka kamera
+  const handleOpenPhotoCapture = () => {
+    if (!plants || plants.length === 0) {
+      showToast('Belum ada tanaman terdaftar. Tambahkan tanaman terlebih dahulu di menu Kelola Tanaman.', 'warning');
+      return;
+    }
+    // Set default target plant
+    const defaultId = (selectedPlantId && selectedPlantId !== 'all') ? selectedPlantId : plants[0]?.id;
+    setTargetPlantForCamera(defaultId);
+    setIsSelectPlantModalOpen(true);
+  };
+
+  // Konfirmasi tanaman yang dipilih dan lanjut buka kamera
+  const handleConfirmSelectPlantAndOpenCamera = () => {
+    if (!targetPlantForCamera) {
+      showToast('Silakan pilih salah satu tanaman terlebih dahulu.', 'warning');
+      return;
+    }
+    setIsSelectPlantModalOpen(false);
+    setIsCameraOpen(true);
+  };
+
   const handleCameraCapture = async (file) => {
-    const plantId = (targetPlantForCamera && targetPlantForCamera !== 'all')
-      ? targetPlantForCamera
-      : (selectedPlantId !== 'all' ? selectedPlantId : plants[0]?.id);
+    const plantId = targetPlantForCamera || (selectedPlantId !== 'all' ? selectedPlantId : plants[0]?.id);
+    const chosenPlant = plants.find((p) => p.id === plantId);
 
     if (!plantId) {
       showToast('Belum ada tanaman terdaftar. Tambahkan tanaman terlebih dahulu.', 'warning');
@@ -123,7 +143,7 @@ export default function HistoryPage() {
     }
 
     setAnalyzingPhoto(true);
-    showToast('🔍 Mengirim foto & menganalisis dengan AI...', 'info');
+    showToast(`🔍 Mengirim foto & menganalisis ${chosenPlant?.name || 'tanaman'} dengan AI...`, 'info');
 
     try {
       const res = await analyzePlantPhotoApi(plantId, file);
@@ -132,9 +152,13 @@ export default function HistoryPage() {
         hasil: res.hasil,
         status: res.status,
         analyzedAt: new Date().toISOString(),
+        plantName: chosenPlant?.name,
       });
-      showToast('✅ Analisis AI selesai & foto tersimpan!', 'success');
+      showToast(`✅ Foto & diagnosa AI berhasil disimpan untuk ${chosenPlant?.name || 'tanaman'}!`, 'success');
       loadPhotosHistory();
+      if (typeof loadPlants === 'function') {
+        loadPlants();
+      }
     } catch (err) {
       showToast(err.message || 'Gagal menganalisis foto tanaman.', 'error');
     } finally {
@@ -189,10 +213,7 @@ export default function HistoryPage() {
         </div>
 
         <button
-          onClick={() => {
-            setTargetPlantForCamera(selectedPlantId !== 'all' ? selectedPlantId : (plants[0]?.id || ''));
-            setIsCameraOpen(true);
-          }}
+          onClick={handleOpenPhotoCapture}
           className="btn btn-sm"
           style={{
             background: 'linear-gradient(135deg, #7E22CE, #9333EA)',
@@ -661,13 +682,206 @@ export default function HistoryPage() {
         </div>
       )}
 
+      {/* ── Modal Popup: Pilih Kepemilikan Tanaman untuk Foto Baru ── */}
+      {isSelectPlantModalOpen && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsSelectPlantModalOpen(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="select-plant-title"
+        >
+          <div
+            className="modal"
+            style={{
+              maxWidth: '480px',
+              width: '92%',
+              padding: '24px',
+              borderRadius: '24px',
+              background: '#FFFFFF',
+              boxShadow: '0 20px 48px rgba(15, 110, 86, 0.18)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #E6F7F0, #DCF3EA)',
+                    color: '#1D9E75',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '22px',
+                    flexShrink: 0,
+                  }}
+                >
+                  🌱
+                </div>
+                <div>
+                  <h3 id="select-plant-title" style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--color-text)' }}>
+                    Foto Tanaman Milik Siapa?
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--color-text-sub)' }}>
+                    Pilih tanaman tujuan agar foto dan hasil analisis AI tersimpan ke tanaman tersebut.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSelectPlantModalOpen(false)}
+                className="btn-ghost"
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  color: 'var(--color-text-muted)',
+                  padding: '4px',
+                }}
+                aria-label="Tutup"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* List Pilihan Tanaman */}
+            <div
+              style={{
+                maxHeight: '280px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                margin: '18px 0 24px',
+                paddingRight: '4px',
+              }}
+            >
+              {plants.map((p) => {
+                const isSelected = targetPlantForCamera === p.id;
+                const plantAvatar = p.latestPhoto?.url;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => setTargetPlantForCamera(p.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && setTargetPlantForCamera(p.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 14px',
+                      borderRadius: '16px',
+                      border: isSelected ? '2px solid #1D9E75' : '1.5px solid var(--color-border, #E2E8F0)',
+                      background: isSelected ? 'rgba(29, 158, 117, 0.06)' : '#FFFFFF',
+                      cursor: 'pointer',
+                      transition: 'all 0.18s ease',
+                      boxShadow: isSelected ? '0 4px 12px rgba(29, 158, 117, 0.12)' : 'none',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        background: '#EDF7F3',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px',
+                        flexShrink: 0,
+                        border: '1px solid rgba(29, 158, 117, 0.15)',
+                      }}
+                    >
+                      {plantAvatar ? (
+                        <img
+                          src={plantAvatar}
+                          alt={p.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        p.emoji || '🌱'
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {p.name}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-sub)', marginTop: '2px' }}>
+                        {p.type || 'Umum'} · Kelembaban: {p.moisture !== null && p.moisture !== undefined ? `${p.moisture}%` : '–'}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '50%',
+                        border: isSelected ? '6px solid #1D9E75' : '2px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        boxSizing: 'border-box',
+                        flexShrink: 0,
+                        transition: 'all 0.18s ease',
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsSelectPlantModalOpen(false)}
+                style={{ borderRadius: '12px', padding: '10px 18px', fontSize: '13.5px' }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmSelectPlantAndOpenCamera}
+                disabled={!targetPlantForCamera}
+                style={{
+                  borderRadius: '12px',
+                  padding: '10px 20px',
+                  fontSize: '13.5px',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #1D9E75, #28B585)',
+                  boxShadow: '0 4px 14px rgba(29, 158, 117, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>📷</span> Lanjut Buka Kamera
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Live Camera Modal ── */}
       <CameraCaptureModal
         isOpen={isCameraOpen}
         onClose={() => setIsCameraOpen(false)}
         onPhotoCaptured={handleCameraCapture}
-        title="Kamera Live &amp; Analisa AI"
-        subtitle="Arahkan kamera ke tanaman untuk menyimpan foto dan mendapatkan diagnosa penyakit AI"
+        title={
+          plants.find((p) => p.id === targetPlantForCamera)
+            ? `Foto Tanaman: ${plants.find((p) => p.id === targetPlantForCamera).name}`
+            : 'Kamera Live & Analisa AI'
+        }
+        subtitle={
+          plants.find((p) => p.id === targetPlantForCamera)
+            ? `Posisikan daun ${plants.find((p) => p.id === targetPlantForCamera).name} di dalam bingkai untuk foto dan diagnosa AI`
+            : 'Arahkan kamera ke tanaman untuk menyimpan foto dan mendapatkan diagnosa penyakit AI'
+        }
         confirmLabel="Simpan &amp; Analisa AI"
       />
     </Layout>

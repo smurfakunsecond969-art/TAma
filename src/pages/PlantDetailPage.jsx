@@ -15,7 +15,7 @@ import {
 import '../css/app.css';
 
 export default function PlantDetailPage() {
-  const { showToast, user } = useApp();
+  const { showToast, user, loadPlants } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const query = new URLSearchParams(location.search);
@@ -40,16 +40,15 @@ export default function PlantDetailPage() {
   const [photoDocPreview, setPhotoDocPreview] = useState(null);
   const [photoDocCatatan, setPhotoDocCatatan] = useState('');
   const [uploadingDoc, setUploadingDoc] = useState(false);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Live Web Camera State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraPurpose, setCameraPurpose] = useState('analyze'); // 'analyze' or 'doc'
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
-  const analyzeInputRef = useRef(null);
   const docInputRef = useRef(null);
 
-  // Load photos & analysis
+  // Load photos
   const loadPhotos = async () => {
     if (!plantId) return;
     setPhotosLoading(true);
@@ -63,11 +62,11 @@ export default function PlantDetailPage() {
     }
   };
 
-  // Eksekusi proses analisa AI pada file (dari kamera atau file upload)
+  // Eksekusi proses analisa AI pada file
   const executeAnalyze = async (file) => {
     if (!file) return;
     setAnalyzing(true);
-    showToast('🔍 Mengirim foto & menganalisis dengan AI...', 'info');
+    showToast('🔍 Menganalisis foto tanaman dengan AI...', 'info');
 
     try {
       const res = await analyzePlantPhotoApi(plantId, file);
@@ -75,10 +74,15 @@ export default function PlantDetailPage() {
         photoUrl: res.photo?.photo_url,
         hasil: res.hasil,
         status: res.status,
+        healthScore: res.healthScore,
+        diseaseCategory: res.diseaseCategory,
+        saran: res.saran,
         analyzedAt: new Date().toISOString(),
       });
-      showToast('✅ Analisis AI selesai!', 'success');
+      showToast('✅ Diagnosa AI selesai!', 'success');
       loadPhotos();
+      loadPlant();
+      if (typeof loadPlants === 'function') loadPlants();
     } catch (err) {
       showToast(err.message || 'Gagal menganalisis foto tanaman.', 'error');
     } finally {
@@ -86,15 +90,7 @@ export default function PlantDetailPage() {
     }
   };
 
-  // Trigger kamera / file upload untuk analisa AI
-  const handleAnalyzeFileSelected = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    executeAnalyze(file);
-  };
-
-  // Handler saat foto selesai dijepret lewat Live Camera Web
+  // Handler foto dari Kamera Web
   const handleLivePhotoCaptured = (file) => {
     if (cameraPurpose === 'analyze') {
       executeAnalyze(file);
@@ -105,7 +101,7 @@ export default function PlantDetailPage() {
     }
   };
 
-  // Submit foto dokumentasi biasa
+  // Submit foto dokumentasi
   const handleDocSubmit = async (e) => {
     e.preventDefault();
     if (!photoDocFile) {
@@ -122,40 +118,34 @@ export default function PlantDetailPage() {
       setPhotoDocPreview(null);
       setPhotoDocCatatan('');
       loadPhotos();
+      loadPlant();
+      if (typeof loadPlants === 'function') loadPlants();
     } catch (err) {
-      showToast(err.message || 'Gagal menyimpan foto dokumentasi.', 'error');
+      showToast(err.message || 'Gagal menyimpan foto.', 'error');
     } finally {
       setUploadingDoc(false);
     }
   };
 
-  // Load data tanaman dari API
+  // Load data tanaman
   const loadPlant = async () => {
     if (!plantId) {
       navigate('/dashboard');
       return;
     }
+    setLoading(true);
     try {
       const data = await fetchPlantById(plantId);
+      if (!data) {
+        showToast('Tanaman tidak ditemukan', 'error');
+        navigate('/dashboard');
+        return;
+      }
       setPlant(data);
     } catch (err) {
-      navigate('/dashboard');
+      showToast(err.message || 'Gagal memuat data tanaman', 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Load chart data
-  const loadChartData = async () => {
-    if (!plantId) return;
-    setChartLoading(true);
-    try {
-      const data = await fetchPlantChartHistory(plantId, chartMode);
-      setChartData(data);
-    } catch (err) {
-      console.error('Gagal load chart:', err.message);
-    } finally {
-      setChartLoading(false);
     }
   };
 
@@ -164,193 +154,125 @@ export default function PlantDetailPage() {
     loadPhotos();
   }, [plantId]);
 
-  // Polling setiap 60 detik untuk refresh data sensor real
+  // Load chart history
   useEffect(() => {
     if (!plantId) return;
-    const interval = setInterval(() => {
-      loadPlant();
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [plantId]);
-
-  // Load chart ketika chartMode berubah
-  useEffect(() => {
-    loadChartData();
+    const fetchChart = async () => {
+      setChartLoading(true);
+      try {
+        const data = await fetchPlantChartHistory(plantId, chartMode);
+        setChartData(data);
+      } catch (err) {
+        console.error('Chart history fetch error:', err);
+      } finally {
+        setChartLoading(false);
+      }
+    };
+    fetchChart();
   }, [plantId, chartMode]);
 
-  // Render chart ketika data chart tersedia
+  // Draw chart
   useEffect(() => {
-    if (chartData && canvasRef.current) {
-      drawChart(chartData.values, chartData.labels);
-    }
-  }, [chartData, plant]);
-
-  if (loading) {
-    return (
-      <Layout title="Detail Tanaman">
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
-          <span className="spinner" style={{ width: '32px', height: '32px', borderColor: 'var(--color-border)', borderTopColor: 'var(--color-primary)' }}></span>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!plant) return null;
-
-  const hasMoisture = plant.moisture !== null && plant.moisture !== undefined;
-  const moistureDisplay = hasMoisture ? plant.moisture : '--';
-
-  function getMoistureColor(pct, min, max) {
-    if (pct === null || pct === undefined) return 'var(--color-text-muted, #9BB5AC)';
-    if (pct < min) return 'var(--color-warning)';
-    if (pct > max) return 'var(--color-info)';
-    return 'var(--color-primary)';
-  }
-
-  const mColor = getMoistureColor(plant.moisture, plant.moistureMin, plant.moistureMax);
-  // isWarning: device ada tapi tidak sync > 30 menit, ATAU moisture null (belum ada data)
-  const hasSynced = plant.lastUpdate !== null && plant.lastUpdate !== undefined && plant.lastUpdate < 999;
-  const isWarning = !hasSynced || plant.lastUpdate > 30;
-
-  const formatTime = (minutes) => {
-    if (minutes === undefined || minutes === null || minutes >= 999) return 'Belum pernah sync';
-    if (minutes < 60) return `${minutes} menit lalu`;
-    const h = Math.floor(minutes / 60);
-    return `${h} jam lalu`;
-  };
-
-  const formatDate = (isoStr) => {
-    if (!isoStr) return '-';
-    const d = new Date(isoStr);
-    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  };
-
-  const formatDateTime = (isoStr) => {
-    if (!isoStr) return '-';
-    const d = new Date(isoStr);
-    return d.toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  };
-
-  // hasDevice: apakah device record sudah terdaftar di DB (dari backend)
-  // hasSynced: apakah device sudah pernah kirim data sensor
-  const deviceConnected = Boolean(plant.hasDevice);
-  const deviceLabel = deviceConnected
-    ? (plant.deviceId || 'Terdaftar')
-    : 'Belum Dipasang';
-  const r = 54;
-  const c = 2 * Math.PI * r;
-  const dash = hasMoisture ? (plant.moisture / 100) * c : 0;
-
-  const drawChart = (data, labels) => {
+    if (!chartData || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-
-    const W = canvas.parentElement.offsetWidth || 700;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.parentElement.offsetWidth || 400;
     const H = 200;
 
-    canvas.width = W * window.devicePixelRatio;
-    canvas.height = H * window.devicePixelRatio;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
-
-    // Kalau tidak ada data sensor, tampilkan pesan kosong di canvas
-    if (!data || data.length === 0) {
-      ctx.fillStyle = '#9BB5AC';
-      ctx.font = '13px Plus Jakarta Sans, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Belum ada data sensor', W / 2, H / 2);
-      return;
-    }
 
     const padL = 36, padR = 16, padT = 16, padB = 36;
     const chartW = W - padL - padR;
     const chartH = H - padT - padB;
-    const minV = 0, maxV = 100;
-    const n = data.length;
+    const data = chartData.data || [];
+
+    if (data.length < 2) {
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '12px Plus Jakarta Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Data riwayat sensor belum cukup', W / 2, H / 2);
+      return;
+    }
 
     // Grid lines
-    ctx.strokeStyle = '#EDF7F3';
-    ctx.lineWidth = 1;
     [0, 25, 50, 75, 100].forEach((v) => {
-      const y = padT + chartH - ((v - minV) / (maxV - minV)) * chartH;
-      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
-      ctx.fillStyle = '#9BB5AC';
+      const y = padT + chartH - (v / 100) * chartH;
+      ctx.strokeStyle = '#F1F5F9';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(W - padR, y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94A3B8';
       ctx.font = '10px Plus Jakarta Sans, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(v + '%', padL - 6, y + 4);
+      ctx.fillText(`${v}%`, padL - 6, y + 3);
     });
 
-    // Threshold zone
-    const thMin = padT + chartH - ((plant.moistureMin - minV) / (maxV - minV)) * chartH;
-    const thMax = padT + chartH - ((plant.moistureMax - minV) / (maxV - minV)) * chartH;
-    ctx.fillStyle = 'rgba(29,158,117,0.05)';
-    ctx.fillRect(padL, thMax, chartW, thMin - thMax);
+    // Draw line
+    const points = data.map((d, i) => {
+      const x = padL + (i / (data.length - 1)) * chartW;
+      const y = padT + chartH - ((d.value || 0) / 100) * chartH;
+      return { x, y, label: d.label, val: d.value };
+    });
 
-    // Points
-    const pts = data.map((v, i) => ({
-      x: padL + (i / (n - 1)) * chartW,
-      y: padT + chartH - ((v - minV) / (maxV - minV)) * chartH,
-    }));
-
-    // Area fill gradient
-    const grad = ctx.createLinearGradient(0, padT, 0, H);
-    grad.addColorStop(0, 'rgba(29,158,117,0.18)');
-    grad.addColorStop(1, 'rgba(29,158,117,0)');
+    // Area fill
     ctx.beginPath();
-    ctx.moveTo(pts[0].x, H - padB);
-    pts.forEach((p) => ctx.lineTo(p.x, p.y));
-    ctx.lineTo(pts[n - 1].x, H - padB);
+    ctx.moveTo(points[0].x, padT + chartH);
+    points.forEach((p) => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(points[points.length - 1].x, padT + chartH);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + chartH);
+    grad.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
+    grad.addColorStop(1, 'rgba(16, 185, 129, 0.01)');
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Smooth spline line
+    // Line stroke
     ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) {
-      const cpx = (pts[i - 1].x + pts[i].x) / 2;
-      ctx.bezierCurveTo(cpx, pts[i - 1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
-    }
-    ctx.strokeStyle = '#1D9E75';
+    ctx.moveTo(points[0].x, points[0].y);
+    points.forEach((p) => ctx.lineTo(p.x, p.y));
+    ctx.strokeStyle = '#10B981';
     ctx.lineWidth = 2.5;
-    ctx.lineJoin = 'round';
     ctx.stroke();
 
-    // Render nodes
-    pts.forEach((p) => {
+    // Points & labels
+    points.forEach((p, i) => {
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#1D9E75';
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 2;
+      ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#10B981';
       ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
       ctx.stroke();
-    });
 
-    // Draw Labels
-    ctx.fillStyle = '#9BB5AC';
-    ctx.font = '10px Plus Jakarta Sans, sans-serif';
-    ctx.textAlign = 'center';
-    labels.forEach((lbl, i) => {
-      ctx.fillText(lbl, pts[i].x, H - padB + 18);
+      if (i % Math.ceil(data.length / 6) === 0 || i === data.length - 1) {
+        ctx.fillStyle = '#64748B';
+        ctx.font = '10px Plus Jakarta Sans, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.label, p.x, H - 10);
+      }
     });
-  };
+  }, [chartData]);
 
   const handleWaterNow = async () => {
-    if (watering) return;
+    if (watering || !plant) return;
     setWatering(true);
-    setWaterMsg('Perintah terkirim. Tanamanmu akan disiram sebentar lagi.');
+    setWaterMsg('Mengirim perintah penyiraman...');
     try {
       await waterPlantApi(plant.id);
-      showToast(`💧 ${plant.name} sedang disiram`, 'success');
-      // Refresh data setelah 3 detik untuk lihat update
+      showToast(`💧 Perintah terkirim: ${plant.name} sedang disiram`, 'success');
       setTimeout(async () => {
         await loadPlant();
         setWaterMsg('');
         setWatering(false);
-        showToast(`✅ ${plant.name} berhasil disiram`, 'success');
       }, 3000);
     } catch (err) {
       showToast(err.message || 'Gagal mengirim perintah siram', 'error');
@@ -373,19 +295,54 @@ export default function PlantDetailPage() {
     }
   };
 
-  const hasDocPhoto = photos.some((p) => !p.is_analysis_photo);
+  if (loading || !plant) {
+    return (
+      <Layout title="Detail Tanaman">
+        <div style={{ textAlign: 'center', padding: '5rem 1rem', color: '#94A3B8' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🌿</div>
+          <div style={{ fontWeight: 700, color: '#334155' }}>Memuat Detail Tanaman...</div>
+        </div>
+      </Layout>
+    );
+  }
+
+  const hasMoisture = plant.moisture !== null && plant.moisture !== undefined;
+  const isWarning = plant.condition === 'kritis' || plant.condition === 'perlu_perhatian';
+  const mColor = hasMoisture
+    ? plant.moisture < plant.moistureMin
+      ? '#F59E0B'
+      : plant.moisture > plant.moistureMax
+      ? '#3B82F6'
+      : '#10B981'
+    : '#94A3B8';
+
+  // Gauge values
+  const r = 48;
+  const c = 2 * Math.PI * r;
+  const pct = hasMoisture ? Math.min(100, Math.max(0, plant.moisture)) : 0;
+  const dash = (pct / 100) * c;
+
+  const formatDate = (dStr) => {
+    if (!dStr) return '–';
+    return new Date(dStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const formatDateTime = (dStr) => {
+    if (!dStr) return '–';
+    return new Date(dStr).toLocaleDateString('id-ID', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  const formatTime = (minutes) => {
+    if (minutes === undefined || minutes === null || minutes >= 999) return 'Belum sync';
+    if (minutes < 60) return `${minutes} menit lalu`;
+    return `${Math.floor(minutes / 60)} jam lalu`;
+  };
 
   return (
-    <Layout title="Detail Tanaman">
-      {/* Hidden file inputs */}
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        ref={analyzeInputRef}
-        onChange={handleAnalyzeFileSelected}
-        style={{ display: 'none' }}
-      />
+    <Layout title={`Detail: ${plant.name}`}>
+      {/* Hidden file input for upload */}
       <input
         type="file"
         accept="image/*"
@@ -395,683 +352,590 @@ export default function PlantDetailPage() {
           if (file) {
             setPhotoDocFile(file);
             setPhotoDocPreview(URL.createObjectURL(file));
+            setShowPhotoDocModal(true);
           }
         }}
         style={{ display: 'none' }}
       />
 
-      {/* Banner Rekomendasi Foto Tanaman */}
-      {!hasDocPhoto && !bannerDismissed && (
-        <div
-          className="plant-doc-banner"
-          style={{
-            background: 'linear-gradient(135deg, rgba(29,158,117,0.12), rgba(168,85,247,0.08))',
-            border: '1.5px dashed var(--color-primary, #1D9E75)',
-            borderRadius: 'var(--radius-lg, 16px)',
-            padding: '16px 20px',
-            marginBottom: 'var(--space-6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '24px' }}>🌿</span>
-            <div>
-              <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text, #1A2B25)', fontSize: '14px' }}>
-                Tanaman ini belum punya foto asli tanaman
-              </p>
-              <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: 'var(--color-text-sub, #4D6B60)' }}>
-                Tambahkan foto &amp; catatan kondisi pohon untuk melengkapi riwayat memori Tanamanmu.
-              </p>
+      <div style={{ maxWidth: 880, margin: '0 auto', padding: '0.75rem 1rem 4rem' }}>
+
+        {/* ── 1. Clean Detail Header Card ── */}
+        <div style={{
+          background: '#FFFFFF', borderRadius: 24, padding: '1.5rem',
+          border: '1.5px solid #E2E8F0', marginBottom: '1.5rem',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem' }}>
+            
+            {/* Plant Info Left */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 260 }}>
+              <div style={{
+                width: 68, height: 68, borderRadius: 20, overflow: 'hidden',
+                background: '#F1F5F9', border: '2px solid #E2E8F0',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                {plant.latestPhoto?.url || (photos && photos[0]?.photo_url) ? (
+                  <img
+                    src={plant.latestPhoto?.url || photos[0]?.photo_url}
+                    alt={plant.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: '2.2rem' }}>{plant.emoji || '🌱'}</span>
+                )}
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <h1 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#0F172A' }}>
+                    {plant.name}
+                  </h1>
+
+                  {/* Health Score Badge */}
+                  {plant.healthScore != null && (
+                    <span style={{
+                      fontSize: '0.78rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: 10,
+                      background: plant.conditionColor === 'red' ? '#FEF2F2' : plant.conditionColor === 'yellow' ? '#FFFBEB' : '#ECFDF5',
+                      color: plant.conditionColor === 'red' ? '#DC2626' : plant.conditionColor === 'yellow' ? '#D97706' : '#059669',
+                      border: `1px solid ${plant.conditionColor === 'red' ? '#FCA5A5' : plant.conditionColor === 'yellow' ? '#FDE68A' : '#A7F3D0'}`,
+                    }}>
+                      Skor: {plant.healthScore}/100 ({plant.conditionLabel || 'Sehat'})
+                    </span>
+                  )}
+
+                  {plant.sensorNotConnected && (
+                    <span style={{
+                      fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: 6,
+                      background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A',
+                    }}>
+                      🔌 Belum Ada Sensor
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: 8, fontSize: '0.8rem', color: '#64748B' }}>
+                  <span style={{ background: '#F1F5F9', padding: '0.15rem 0.5rem', borderRadius: 6, fontWeight: 600 }}>
+                    🌿 {plant.type || 'Tanaman'} {plant.varietas ? `(${plant.varietas})` : ''}
+                  </span>
+                  {plant.fasePertumbuhan && (
+                    <span style={{ background: '#ECFDF5', color: '#047857', padding: '0.15rem 0.5rem', borderRadius: 6, fontWeight: 600, border: '1px solid #A7F3D0' }}>
+                      🌱 {plant.fasePertumbuhan.split(' ')[0]}
+                    </span>
+                  )}
+                  {plant.lokasiBlok && (
+                    <span style={{ background: '#EFF6FF', color: '#1D4ED8', padding: '0.15rem 0.5rem', borderRadius: 6, fontWeight: 600, border: '1px solid #BFDBFE' }}>
+                      📍 {plant.lokasiBlok}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setShowProfileModal(true)}
+                    style={{
+                      background: '#F0FDF4', color: '#059669', border: '1px solid #A7F3D0',
+                      padding: '0.15rem 0.6rem', borderRadius: 6, fontWeight: 700,
+                      cursor: 'pointer', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}
+                  >
+                    📖 Baca Keterangan & Profil Tanaman
+                  </button>
+                  <span>📅 Tanam: {formatDate(plant.startDate)}</span>
+                  <span>📟 {plant.deviceId ? `ID: ${plant.deviceId}` : 'Tanpa Sensor'}</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => setShowPhotoDocModal(true)}
-              style={{ borderRadius: '9999px', fontSize: '13px' }}
-            >
-              + Tambah Foto Sekarang
-            </button>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => setBannerDismissed(true)}
-              style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}
-            >
-              Nanti Saja
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* Detail Header Card */}
-      <div className="detail-header-card" role="region" aria-label="Info tanaman">
-        <div className="detail-plant-info">
-          <div className="detail-plant-icon" id="plant-emoji" aria-hidden="true">
-            {plant.emoji}
-          </div>
-          <div>
-            <h2 className="detail-plant-name">{plant.name}</h2>
-            <div className="detail-plant-meta">
-              <span className="detail-meta-item">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                <span>{plant.type}</span>
-              </span>
-              <span className="detail-meta-item">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <rect x="3" y="4" width="18" height="18" rx="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-                <span>Sejak {formatDate(plant.startDate)}</span>
-              </span>
-              <span className="detail-meta-item">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                  <line x1="12" y1="18" x2="12.01" y2="18" />
-                </svg>
-                <span style={{ color: deviceConnected ? 'inherit' : 'var(--color-text-muted)' }}>
-                  {deviceLabel}
-                </span>
-              </span>
+            {/* 2 Clear Action Buttons */}
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleWaterNow}
+                disabled={watering}
+                style={{
+                  padding: '0.6rem 1.15rem', borderRadius: 12,
+                  background: '#3B82F6', color: '#fff', border: 'none',
+                  fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  boxShadow: '0 2px 8px rgba(59,130,246,0.3)',
+                }}
+              >
+                {watering ? (
+                  <span>💧 Menyiram…</span>
+                ) : (
+                  <>
+                    <span>💧</span>
+                    <span>Siram Tanaman</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  setCameraPurpose('analyze');
+                  setIsCameraOpen(true);
+                }}
+                disabled={analyzing}
+                style={{
+                  padding: '0.6rem 1.15rem', borderRadius: 12,
+                  background: 'linear-gradient(135deg, #7E22CE, #9333EA)',
+                  color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.85rem',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  boxShadow: '0 2px 8px rgba(147,51,234,0.3)',
+                }}
+              >
+                {analyzing ? (
+                  <span>🔍 Menganalisis…</span>
+                ) : (
+                  <>
+                    <span>📷</span>
+                    <span>Foto &amp; Diagnosa AI</span>
+                  </>
+                )}
+              </button>
             </div>
+
           </div>
-        </div>
-        <div className="detail-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Tombol Analisa Kesehatan AI */}
-          <button
-            className="btn"
-            style={{
-              background: 'linear-gradient(135deg, #7E22CE, #9333EA)',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: 600,
-              boxShadow: '0 4px 14px rgba(147, 51, 234, 0.3)',
-            }}
-            onClick={() => {
-              setCameraPurpose('analyze');
-              setIsCameraOpen(true);
-            }}
-            disabled={analyzing}
-            aria-label="Buka kamera live untuk analisa kesehatan tanaman dengan AI"
-          >
-            {analyzing ? (
-              <>
-                <span className="spinner" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }}></span>
-                Menganalisis AI...
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-                Buka Kamera / Analisa AI
-              </>
-            )}
-          </button>
 
-          {/* Tombol Siram Sekarang */}
-          <button
-            className={`btn btn-primary flex items-center gap-2 btn-water-now ${watering ? 'watering' : ''}`}
-            onClick={handleWaterNow}
-            disabled={watering}
-            aria-label="Siram tanaman sekarang"
-          >
-            {watering ? (
-              <>
-                <span className="spinner" style={{ borderColor: 'rgba(0,0,0,0.2)', borderTopColor: 'var(--color-primary)' }}></span>
-                Menyiram...
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                </svg>
-                Siram Sekarang
-              </>
-            )}
-          </button>
-          {waterMsg && <p className="text-xs text-muted" style={{ color: 'var(--color-primary)', width: '100%' }} aria-live="polite">{waterMsg}</p>}
+          {waterMsg && (
+            <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#10B981', fontWeight: 600 }}>
+              {waterMsg}
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Detail Grid */}
-      <div className="detail-grid">
-        {/* Left Columns */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+        {/* ── 2. Grid: Kelembaban & Kontrol ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
           
-          {/* Gauge */}
-          <div className="moisture-gauge-section" role="region" aria-label="Kelembaban saat ini">
-            <h3 className="text-lg text-bold mb-4">Kelembaban Saat Ini</h3>
-            <div className="gauge-big pulse-breathe" style={{ position: 'relative' }}>
-              <div className="sonar-ring" style={{ inset: '-10px', opacity: 0.35 }}></div>
-              <div className="sonar-ring" style={{ inset: '-10px', opacity: 0.2, animationDelay: '1.2s' }}></div>
-              <svg id="gauge-svg" width="128" height="128" viewBox="0 0 128 128" aria-hidden="true">
-                <circle cx="64" cy="64" r={r} fill="none" stroke="#EDF7F3" strokeWidth="10" />
-                <circle
-                  cx="64"
-                  cy="64"
-                  r={r}
-                  fill="none"
-                  stroke={mColor}
-                  strokeWidth="10"
-                  strokeDasharray={`${dash} ${c}`}
-                  strokeDashoffset={c * 0.25}
-                  strokeLinecap="round"
-                  style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)' }}
-                />
-              </svg>
-              <div className="gauge-center-text">
-                <div className="gauge-pct" aria-label="Kelembaban saat ini">
-                  {hasMoisture ? `${plant.moisture}%` : '--'}
-                </div>
-                <div className="gauge-sub">Kelembaban</div>
-              </div>
-            </div>
-            <div className="gauge-stats" role="list" aria-label="Statistik kelembaban">
-              <div className="gauge-stat" role="listitem">
-                <div className="gauge-stat-val">{hasMoisture ? `${plant.moisture}%` : '--'}</div>
-                <div className="gauge-stat-lbl">Sekarang</div>
-              </div>
-              <div className="gauge-stat" role="listitem">
-                <div className="gauge-stat-val">{plant.moistureMin}%</div>
-                <div className="gauge-stat-lbl">Min Ideal</div>
-              </div>
-              <div className="gauge-stat" role="listitem">
-                <div className="gauge-stat-val">{plant.moistureMax}%</div>
-                <div className="gauge-stat-lbl">Max Ideal</div>
-              </div>
-            </div>
-          </div>
+          {/* Kolom Kiri: Gauge & Grafik Tren */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            
+            {/* Current Moisture Gauge Card */}
+            <div style={{
+              background: '#FFFFFF', borderRadius: 20, padding: '1.25rem',
+              border: '1.5px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+            }}>
+              <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 800, color: '#0F172A' }}>
+                💧 Kelembaban Tanah Saat Ini
+              </h3>
 
-          {/* Chart */}
-          <div className="chart-section" role="region" aria-label="Grafik tren kelembaban">
-            <div className="chart-header">
-              <h3 className="text-lg text-bold">Tren Kelembaban</h3>
-              <div className="chart-tabs" role="tablist" aria-label="Pilih rentang waktu">
-                <button
-                  className={`chart-tab ${chartMode === 'daily' ? 'active' : ''}`}
-                  onClick={() => setChartMode('daily')}
-                  role="tab"
-                  aria-selected={chartMode === 'daily'}
-                >
-                  Harian
-                </button>
-                <button
-                  className={`chart-tab ${chartMode === 'weekly' ? 'active' : ''}`}
-                  onClick={() => setChartMode('weekly')}
-                  role="tab"
-                  aria-selected={chartMode === 'weekly'}
-                >
-                  Mingguan
-                </button>
-              </div>
-            </div>
-            <div className="chart-canvas-wrap">
-              {chartLoading || !chartData ? (
-                <div className="chart-skeleton-line" aria-hidden="true">
-                  <div className="skeleton-line" style={{ width: '92%' }}></div>
-                  <div className="skeleton-line" style={{ width: '76%' }}></div>
-                  <div className="skeleton-line" style={{ width: '84%' }}></div>
-                  <div className="skeleton-line" style={{ width: '62%' }}></div>
-                </div>
-              ) : (
-                <canvas id="moistureChart" ref={canvasRef} aria-label="Grafik kelembaban tanah" role="img"></canvas>
-              )}
-            </div>
-          </div>
-
-          {/* Log */}
-          <div className="card card-flat" role="region" aria-label="Riwayat penyiraman">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg text-bold">Riwayat Penyiraman</h3>
-              <Link to="/history" className="btn btn-ghost btn-xs">
-                Lihat Semua →
-              </Link>
-            </div>
-            <div className="history-log" id="water-log" aria-live="polite">
-              {(!plant.waterLog || plant.waterLog.length === 0) ? (
-                <p className="text-sm text-muted">Belum ada penyiraman.</p>
-              ) : (
-                plant.waterLog.slice(0, 6).map((log) => {
-                  const isAuto = log.type === 'auto';
-                  return (
-                    <div className="log-item" key={log.id}>
-                      <div className={`log-dot ${isAuto ? 'auto' : 'manual'}`}></div>
-                      <div className="log-content">
-                        <div className="log-title">
-                          {isAuto ? 'Disiram Otomatis' : `Disiram Manual oleh ${log.by || 'Anda'}`}
-                        </div>
-                        <div className="log-time">
-                          {formatDateTime(log.time)}
-                          {log.before != null && log.after != null ? ` · ${log.before}% → ${log.after}%` : ''}
-                          {log.duration != null ? ` · ${log.duration} mnt` : ''}
-                        </div>
-                      </div>
-                      <div className="log-badge">
-                        <span className={`badge ${isAuto ? 'badge-green' : 'badge-blue'} text-xs`}>
-                          {isAuto ? 'Otomatis' : 'Manual'}
-                        </span>
-                      </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ position: 'relative', width: 110, height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="110" height="110" viewBox="0 0 110 110" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx="55" cy="55" r={r} fill="none" stroke="#F1F5F9" strokeWidth="10" />
+                    <circle
+                      cx="55" cy="55" r={r} fill="none" stroke={mColor} strokeWidth="10"
+                      strokeDasharray={`${dash} ${c}`} strokeLinecap="round"
+                      style={{ transition: 'stroke-dasharray 1s ease' }}
+                    />
+                  </svg>
+                  <div style={{ position: 'absolute', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A' }}>
+                      {hasMoisture ? `${plant.moisture}%` : '–'}
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Columns: Control Card */}
-        <div>
-          <div className="water-control-card" role="region" aria-label="Kontrol penyiraman">
-            <div className="water-control-header">
-              <h3>Kontrol Penyiraman</h3>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)', marginTop: '4px' }}>
-                Atur penyiraman tanaman ini
-              </p>
-            </div>
-            <div className="water-control-body">
-              {/* Auto Water toggle */}
-              <div className="auto-water-row" role="group" aria-labelledby="auto-water-label">
-                <div className="auto-water-top">
-                  <div className="auto-water-title" id="auto-water-label">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--color-primary)"
-                      strokeWidth="2"
-                      style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }}
-                    >
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M19.07 4.93a10 10 0 1 1-14.14 0" />
-                    </svg>
-                    Siram Hingga Optimal
+                    <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>Kadar Air</div>
                   </div>
-                  <label className="toggle" aria-label="Aktifkan siram hingga optimal">
-                    <input type="checkbox" id="auto-water-toggle" checked={plant.autoWater} onChange={handleAutoWaterToggle} />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1.5rem' }}>
+                    <span style={{ color: '#64748B' }}>Status Kadar:</span>
+                    <strong style={{ color: mColor }}>
+                      {hasMoisture
+                        ? plant.moisture < plant.moistureMin
+                          ? 'Terlalu Kering'
+                          : plant.moisture > plant.moistureMax
+                          ? 'Terlalu Basah'
+                          : 'Optimal'
+                        : 'Tanpa Data'}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1.5rem' }}>
+                    <span style={{ color: '#64748B' }}>Rentang Ideal:</span>
+                    <strong>{plant.moistureMin}% - {plant.moistureMax}%</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1.5rem' }}>
+                    <span style={{ color: '#64748B' }}>Sync Sensor:</span>
+                    <span>{formatTime(plant.lastUpdate)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tren Kelembaban (Canvas Chart) */}
+            <div style={{
+              background: '#FFFFFF', borderRadius: 20, padding: '1.25rem',
+              border: '1.5px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0F172A' }}>
+                  📈 Tren Kelembaban
+                </h3>
+                <div style={{ display: 'flex', background: '#F1F5F9', padding: 2, borderRadius: 10 }}>
+                  <button
+                    onClick={() => setChartMode('daily')}
+                    style={{
+                      padding: '0.25rem 0.65rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
+                      background: chartMode === 'daily' ? '#fff' : 'transparent',
+                      color: chartMode === 'daily' ? '#0F172A' : '#64748B',
+                      border: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    Harian
+                  </button>
+                  <button
+                    onClick={() => setChartMode('weekly')}
+                    style={{
+                      padding: '0.25rem 0.65rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
+                      background: chartMode === 'weekly' ? '#fff' : 'transparent',
+                      color: chartMode === 'weekly' ? '#0F172A' : '#64748B',
+                      border: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    Mingguan
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ width: '100%', overflowX: 'auto' }}>
+                {chartLoading ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: '#94A3B8', fontSize: '0.85rem' }}>
+                    Memuat grafik…
+                  </div>
+                ) : (
+                  <canvas ref={canvasRef} style={{ display: 'block', width: '100%' }} />
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Kolom Kanan: Kontrol & Pengaturan Tanaman */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{
+              background: '#FFFFFF', borderRadius: 20, padding: '1.5rem',
+              border: '1.5px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+              display: 'flex', flexDirection: 'column', gap: '1.25rem',
+            }}>
+              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0F172A' }}>
+                ⚙️ Pengaturan &amp; Irigasi Otomatis
+              </h3>
+
+              {/* Auto Water toggle */}
+              <div style={{
+                background: '#F8FAFC', padding: '1rem', borderRadius: 14,
+                border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.5rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0F172A' }}>
+                    🤖 Siram Hingga Optimal
+                  </div>
+                  <label className="toggle" style={{ margin: 0 }}>
+                    <input type="checkbox" checked={plant.autoWater} onChange={handleAutoWaterToggle} />
                     <span className="toggle-slider"></span>
                   </label>
                 </div>
-                <p className="auto-water-desc">
-                  Sistem akan menyiram secara bertahap hingga kelembaban tanah mencapai kondisi ideal, lalu berhenti otomatis.
+                <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748B', lineHeight: 1.4 }}>
+                  Sistem IoT akan otomatis menyiram saat kadar air turun di bawah batas minimum ({plant.moistureMin}%) hingga kembali optimal.
                 </p>
               </div>
 
-              {/* Manual water button */}
-              <button
-                className={`btn btn-water-now ${watering ? 'watering' : ''}`}
-                onClick={handleWaterNow}
-                disabled={watering}
-                aria-label="Siram tanaman sekarang secara manual"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                </svg>
-                Siram Sekarang
-              </button>
-
-              <div className="divider"></div>
-
-              {/* Device Info */}
-              <div>
-                <p className="text-xs text-muted text-semibold mb-2" style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                  Info Perangkat
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted">Device ID</span>
-                    <span className="text-semibold" style={{ color: deviceConnected ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
-                      {deviceLabel}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted">Status</span>
-                    <span className={`badge ${
-                      !deviceConnected ? 'badge-yellow'
-                      : !hasSynced ? 'badge-yellow'
-                      : isWarning ? 'badge-yellow'
-                      : 'badge-green'
-                    } badge-dot text-xs`}>
-                      {!deviceConnected ? 'Belum Dipasang'
-                        : !hasSynced ? 'Belum Ada Data'
-                        : isWarning ? 'Perlu Dicek'
-                        : 'Terhubung'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted">Last sync</span>
-                    <span className="text-semibold">
-                      {!deviceConnected
-                        ? '—'
-                        : formatTime(plant.lastUpdate)}
-                    </span>
-                  </div>
+              {/* Device & Hardware Info */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.82rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748B' }}>Perangkat IoT</span>
+                  <strong>{plant.deviceId || 'Belum Terpasang'}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748B' }}>Status Sensor</span>
+                  <span style={{
+                    fontWeight: 700, color: plant.hasDevice ? '#10B981' : '#F59E0B',
+                  }}>
+                    {plant.hasDevice ? 'Terhubung Aktif' : 'Belum Terhubung'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748B' }}>Ambang Batas</span>
+                  <strong>Min {plant.moistureMin}% · Max {plant.moistureMax}%</strong>
                 </div>
               </div>
 
-              <div className="divider"></div>
-
-              {/* Threshold Display */}
-              <div>
-                <p className="text-xs text-muted text-semibold mb-3" style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                  Ambang Kelembaban
-                </p>
-                <div className="moisture-bar" style={{ height: '10px', marginBottom: 'var(--space-2)' }}>
-                  <div className="moisture-fill" style={{ width: `${hasMoisture ? plant.moisture : 0}%`, background: mColor }}></div>
-                </div>
-                <div className="flex justify-between text-xs text-muted">
-                  <span>
-                    Min: <strong className="text-primary">{plant.moistureMin}%</strong>
-                  </span>
-                  <span>
-                    Sekarang: <strong className="text-primary">{hasMoisture ? `${plant.moisture}%` : '--'}</strong>
-                  </span>
-                  <span>
-                    Max: <strong className="text-primary">{plant.moistureMax}%</strong>
-                  </span>
-                </div>
-              </div>
-
-              <button className="btn btn-outline w-full" style={{ justifyContent: 'center' }} onClick={() => navigate('/manage-plants')}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-                Edit Pengaturan Tanaman
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Section: Memori & Riwayat Foto Tanaman ── */}
-      <div className="card mt-6" style={{ marginTop: 'var(--space-6)', padding: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h3 className="text-lg text-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>📸</span> Memori &amp; Riwayat Diagnosa AI
-            </h3>
-            <p className="text-xs text-muted" style={{ margin: '4px 0 0' }}>
-              Dokumentasi visual, catatan lapangan, dan riwayat analisis kesehatan tanaman dari waktu ke waktu.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => docInputRef.current?.click() || setShowPhotoDocModal(true)}
-            >
-              + Foto Lapangan
-            </button>
-            <button
-              className="btn btn-sm"
-              style={{ background: '#9333EA', color: '#fff' }}
-              onClick={() => analyzeInputRef.current?.click()}
-            >
-              🔍 Analisa AI Baru
-            </button>
-          </div>
-        </div>
-
-        {photosLoading ? (
-          <div style={{ textAlign: 'center', padding: '30px' }}>
-            <span className="spinner"></span>
-            <p className="text-xs text-muted mt-2">Memuat memori foto...</p>
-          </div>
-        ) : photos.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', background: 'var(--color-surface, #F6FAF8)', borderRadius: 'var(--radius-md, 12px)' }}>
-            <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>🌱</span>
-            <p className="text-semibold text-sm" style={{ color: 'var(--color-text)' }}>Belum Ada Foto Tanaman</p>
-            <p className="text-xs text-muted" style={{ maxWidth: '380px', margin: '4px auto 16px' }}>
-              Ambil foto daun untuk didiagnosa AI atau tambahkan foto perkembangan fisik pohonmu.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button className="btn btn-primary btn-sm" onClick={() => analyzeInputRef.current?.click()}>
-                🔍 Foto &amp; Analisa AI
-              </button>
-              <button className="btn btn-outline btn-sm" onClick={() => setShowPhotoDocModal(true)}>
-                📸 Tambah Foto Biasa
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-            {photos.map((item) => {
-              const isAi = item.is_analysis_photo;
-              const hasAnalysis = Boolean(item.analysis);
-              const statusColor = item.analysis?.status === 'sehat'
-                ? '#1D9E75'
-                : item.analysis?.status === 'terindikasi_penyakit'
-                ? '#EF4444'
-                : '#F59E0B';
-              const statusLabel = item.analysis?.status === 'sehat'
-                ? '✅ Sehat'
-                : item.analysis?.status === 'terindikasi_penyakit'
-                ? '⚠️ Terindikasi Penyakit'
-                : item.analysis?.status === 'perlu_perhatian'
-                ? '⚡ Perlu Perhatian'
-                : 'Diagnosa AI';
-
-              return (
-                <div
-                  key={item.id}
+              <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '1rem' }}>
+                <button
+                  onClick={() => navigate('/manage-plants')}
                   style={{
-                    border: '1px solid var(--color-border, #E2E8F0)',
-                    borderRadius: 'var(--radius-lg, 16px)',
-                    overflow: 'hidden',
-                    background: 'var(--color-white, #fff)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                    width: '100%', padding: '0.6rem', borderRadius: 12,
+                    background: '#F1F5F9', border: '1px solid #E2E8F0',
+                    color: '#334155', fontWeight: 700, fontSize: '0.82rem',
+                    cursor: 'pointer', textAlign: 'center',
                   }}
                 >
-                  <div style={{ position: 'relative', height: '180px', background: '#F1F5F9', overflow: 'hidden' }}>
-                    <img
-                      src={item.photo_url}
-                      alt="Foto Tanaman"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      loading="lazy"
-                    />
-                    <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
-                      {isAi ? (
-                        <span
-                          style={{
-                            background: statusColor,
-                            color: '#fff',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            padding: '4px 10px',
-                            borderRadius: '9999px',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                          }}
-                        >
-                          {statusLabel}
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            background: 'rgba(0,0,0,0.65)',
-                            color: '#fff',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            padding: '4px 10px',
-                            borderRadius: '9999px',
-                          }}
-                        >
-                          📷 Foto Lapangan
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  ✏️ Edit Parameter &amp; Sensor Tanaman
+                </button>
+              </div>
+            </div>
 
-                  <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <div>
-                      <p className="text-xs text-muted" style={{ marginBottom: '6px' }}>
-                        {formatDateTime(item.created_at)}
-                      </p>
-                      {item.catatan && (
-                        <p style={{ fontSize: '13px', color: 'var(--color-text)', fontStyle: 'italic', marginBottom: '8px' }}>
-                          &ldquo;{item.catatan}&rdquo;
-                        </p>
-                      )}
-                      {hasAnalysis && (
-                        <div
-                          style={{
-                            background: 'var(--color-surface, #F6FAF8)',
-                            padding: '10px',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            color: 'var(--color-text)',
-                            lineHeight: 1.5,
-                            maxHeight: '120px',
-                            overflowY: 'auto',
-                            borderLeft: `3px solid ${statusColor}`,
-                          }}
-                        >
-                          {item.analysis.hasil_analisis}
-                        </div>
-                      )}
-                    </div>
+            {/* Riwayat Penyiraman Singkat */}
+            <div style={{
+              background: '#FFFFFF', borderRadius: 20, padding: '1.25rem',
+              border: '1.5px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0F172A' }}>
+                  🚿 Riwayat Siram Terkini
+                </h3>
+                <Link to="/history" style={{ fontSize: '0.75rem', color: '#3B82F6', fontWeight: 700, textDecoration: 'none' }}>
+                  Semua Riwayat →
+                </Link>
+              </div>
 
-                    {hasAnalysis && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ alignSelf: 'flex-start', marginTop: '10px', padding: '4px 0', color: 'var(--color-primary)', fontSize: '12px' }}
-                        onClick={() => setAnalysisResult({
-                          photoUrl: item.photo_url,
-                          hasil: item.analysis.hasil_analisis,
-                          status: item.analysis.status,
-                          analyzedAt: item.analysis.analyzed_at,
-                        })}
-                      >
-                        Lihat Diagnosa Lengkap &rarr;
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+              <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                {(!plant.waterLog || plant.waterLog.length === 0) ? (
+                  <p style={{ margin: 0, padding: '0.5rem 0', color: '#94A3B8' }}>Belum ada log penyiraman.</p>
+                ) : (
+                  plant.waterLog.slice(0, 4).map((log) => (
+                    <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid #F8FAFC' }}>
+                      <span>{log.type === 'auto' ? '🤖 Otomatis' : '💧 Manual'}</span>
+                      <span style={{ color: '#94A3B8' }}>{formatDateTime(log.time)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
           </div>
-        )}
+
+        </div>
+
+        {/* ── 3. Memori & Diagnosa Foto Tanaman ── */}
+        <div style={{
+          background: '#FFFFFF', borderRadius: 24, padding: '1.5rem',
+          border: '1.5px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
+                📸 Memori Foto &amp; Diagnosa AI
+              </h3>
+              <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748B' }}>
+                Riwayat dokumentasi visual dan hasil diagnosa daun pohon ini
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowPhotoDocModal(true)}
+              style={{
+                padding: '0.5rem 0.9rem', borderRadius: 12, background: '#F1F5F9',
+                border: '1px solid #E2E8F0', color: '#0F172A', fontWeight: 700,
+                fontSize: '0.82rem', cursor: 'pointer',
+              }}
+            >
+              + Upload Foto Lapangan
+            </button>
+          </div>
+
+          {photosLoading ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#94A3B8' }}>
+              Memuat foto…
+            </div>
+          ) : photos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: '#F8FAFC', borderRadius: 16 }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📷</div>
+              <div style={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem' }}>Belum Ada Foto Tanaman</div>
+              <p style={{ fontSize: '0.8rem', color: '#94A3B8', maxWidth: 360, margin: '4px auto 1rem' }}>
+                Foto daun untuk mendiagnosa kesehatan tanaman atau upload foto dokumentasi lapangan.
+              </p>
+              <button
+                onClick={() => {
+                  setCameraPurpose('analyze');
+                  setIsCameraOpen(true);
+                }}
+                style={{
+                  padding: '0.5rem 1rem', borderRadius: 12, background: '#8B5CF6',
+                  color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
+                }}
+              >
+                📷 Ambil Foto AI Sekarang
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+              {photos.map((item) => {
+                const isAi = item.is_analysis_photo;
+                const hasAnalysis = Boolean(item.analysis);
+                const statusColor = item.analysis?.status === 'sehat'
+                  ? '#10B981'
+                  : item.analysis?.status === 'terindikasi_penyakit'
+                  ? '#EF4444'
+                  : '#F59E0B';
+
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden',
+                      background: '#FFFFFF', boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                      display: 'flex', flexDirection: 'column',
+                    }}
+                  >
+                    <div style={{ position: 'relative', height: 160, background: '#F1F5F9' }}>
+                      <img
+                        src={item.photo_url}
+                        alt="Foto Tanaman"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                        <span style={{
+                          padding: '0.2rem 0.55rem', borderRadius: 12,
+                          background: isAi ? statusColor : 'rgba(0,0,0,0.65)',
+                          color: '#fff', fontSize: '0.7rem', fontWeight: 700,
+                        }}>
+                          {isAi ? (item.analysis?.disease_category || 'Diagnosa AI') : 'Dokumentasi'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '0.85rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginBottom: 4 }}>
+                          {formatDateTime(item.created_at)}
+                        </div>
+                        {item.catatan && (
+                          <div style={{ fontSize: '0.82rem', color: '#334155', fontStyle: 'italic', marginBottom: 6 }}>
+                            &ldquo;{item.catatan}&rdquo;
+                          </div>
+                        )}
+                        {hasAnalysis && (
+                          <div style={{
+                            fontSize: '0.78rem', color: '#475569', background: '#F8FAFC',
+                            padding: '0.5rem', borderRadius: 8, borderLeft: `3px solid ${statusColor}`,
+                            lineHeight: 1.4,
+                          }}>
+                            {item.analysis.hasil_analisis?.slice(0, 80)}…
+                          </div>
+                        )}
+                      </div>
+
+                      {hasAnalysis && (
+                        <button
+                          onClick={() => setAnalysisResult({
+                            photoUrl: item.photo_url,
+                            hasil: item.analysis.hasil_analisis,
+                            status: item.analysis.status,
+                            healthScore: item.analysis.health_score,
+                            diseaseCategory: item.analysis.disease_category,
+                            saran: item.analysis.saran,
+                            analyzedAt: item.analysis.analyzed_at,
+                          })}
+                          style={{
+                            marginTop: '0.5rem', background: 'none', border: 'none',
+                            color: '#3B82F6', fontSize: '0.75rem', fontWeight: 700,
+                            cursor: 'pointer', textAlign: 'left', padding: 0,
+                          }}
+                        >
+                          Lihat Detail AI →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* ── Modal: Hasil Diagnosa AI ── */}
       {analysisResult && (
         <div
           style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
+            position: 'fixed', inset: 0, zIndex: 1100,
+            background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
           }}
           onClick={() => setAnalysisResult(null)}
         >
           <div
             style={{
-              background: '#FFFFFF',
-              borderRadius: '24px',
-              maxWidth: '560px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              padding: '24px',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+              background: '#FFFFFF', borderRadius: 24, maxWidth: 520, width: '100%',
+              maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '24px' }}>🌿</span>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--color-text, #1A2B25)' }}>
-                  Hasil Analisa AI Tanaman
-                </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#0F172A' }}>
+                🔬 Hasil Diagnosa AI
               </div>
               <button
                 onClick={() => setAnalysisResult(null)}
-                style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#64748B' }}
-                aria-label="Tutup popup"
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748B' }}
               >
-                &times;
+                ✕
               </button>
             </div>
 
             {analysisResult.photoUrl && (
-              <div style={{ width: '100%', height: '220px', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px', background: '#F1F5F9' }}>
-                <img src={analysisResult.photoUrl} alt="Foto yang dianalisis" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
+              <img
+                src={analysisResult.photoUrl}
+                alt="Foto"
+                style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 16, marginBottom: '1rem' }}
+              />
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <span
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: '#fff',
-                  background: analysisResult.status === 'sehat'
-                    ? '#1D9E75'
-                    : analysisResult.status === 'terindikasi_penyakit'
-                    ? '#EF4444'
-                    : '#F59E0B',
-                }}
-              >
-                {analysisResult.status === 'sehat'
-                  ? 'Kondisi Sehat'
-                  : analysisResult.status === 'terindikasi_penyakit'
-                  ? 'Terindikasi Penyakit / Hama'
-                  : 'Perlu Perhatian Khusus'}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <span style={{
+                padding: '0.25rem 0.65rem', borderRadius: 12, fontSize: '0.78rem', fontWeight: 800,
+                background: analysisResult.status === 'sehat' ? '#ECFDF5' : '#FEF2F2',
+                color: analysisResult.status === 'sehat' ? '#059669' : '#DC2626',
+              }}>
+                {analysisResult.diseaseCategory || analysisResult.status}
               </span>
-              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                {formatDateTime(analysisResult.analyzedAt)}
-              </span>
+              {analysisResult.healthScore != null && (
+                <span style={{
+                  padding: '0.25rem 0.65rem', borderRadius: 12, fontSize: '0.78rem', fontWeight: 800,
+                  background: '#F1F5F9', color: '#0F172A',
+                }}>
+                  Skor: {analysisResult.healthScore}/100
+                </span>
+              )}
             </div>
 
-            <div
-              style={{
-                background: 'var(--color-surface, #F6FAF8)',
-                padding: '16px',
-                borderRadius: '16px',
-                fontSize: '14px',
-                lineHeight: 1.7,
-                color: 'var(--color-text, #1A2B25)',
-                whiteSpace: 'pre-wrap',
-                marginBottom: '20px',
-                border: '1px solid rgba(29,158,117,0.15)',
-              }}
-            >
+            <div style={{
+              background: '#F8FAFC', padding: '1rem', borderRadius: 14,
+              fontSize: '0.88rem', lineHeight: 1.5, color: '#334155', marginBottom: '1.25rem',
+            }}>
               {analysisResult.hasil}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            {analysisResult.saran && (
+              <div style={{
+                background: '#FFFBEB', border: '1px solid #FDE68A', padding: '0.85rem',
+                borderRadius: 12, fontSize: '0.82rem', color: '#92400E', marginBottom: '1.25rem',
+              }}>
+                💡 <strong>Saran Perawatan:</strong> {analysisResult.saran}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button
-                className="btn btn-outline btn-sm"
                 onClick={() => setAnalysisResult(null)}
+                style={{
+                  padding: '0.5rem 1rem', borderRadius: 10, background: '#F1F5F9',
+                  border: 'none', color: '#475569', fontWeight: 600, cursor: 'pointer',
+                }}
               >
                 Tutup
               </button>
               <button
-                className="btn btn-primary btn-sm"
                 onClick={() => {
                   setAnalysisResult(null);
                   navigate('/taku');
                 }}
+                style={{
+                  padding: '0.5rem 1rem', borderRadius: 10, background: '#10B981',
+                  color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer',
+                }}
               >
-                💬 Tanya Solusi ke Taku AI
+                💬 Tanya Taku AI
               </button>
             </div>
           </div>
@@ -1082,48 +946,35 @@ export default function PlantDetailPage() {
       {showPhotoDocModal && (
         <div
           style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
+            position: 'fixed', inset: 0, zIndex: 1100,
+            background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
           }}
           onClick={() => setShowPhotoDocModal(false)}
         >
           <div
             style={{
-              background: '#FFFFFF',
-              borderRadius: '24px',
-              maxWidth: '480px',
-              width: '100%',
-              padding: '24px',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+              background: '#FFFFFF', borderRadius: 24, maxWidth: 480, width: '100%',
+              padding: '1.5rem', boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--color-text, #1A2B25)' }}>
-                Tambah Foto Dokumentasi
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
+                Tambah Foto Tanaman
               </h3>
               <button
                 onClick={() => setShowPhotoDocModal(false)}
-                style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#64748B' }}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748B' }}
               >
-                &times;
+                ✕
               </button>
             </div>
 
             <form onSubmit={handleDocSubmit}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-                  Pilih Foto Tanaman
-                </label>
+              <div style={{ marginBottom: '1rem' }}>
                 {photoDocPreview ? (
-                  <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px' }}>
+                  <div style={{ position: 'relative', width: '100%', height: 180, borderRadius: 14, overflow: 'hidden', marginBottom: 8 }}>
                     <img src={photoDocPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <button
                       type="button"
@@ -1132,74 +983,192 @@ export default function PlantDetailPage() {
                         setPhotoDocPreview(null);
                       }}
                       style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        background: 'rgba(0,0,0,0.7)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '28px',
-                        height: '28px',
+                        position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.7)',
+                        color: '#fff', border: 'none', borderRadius: '50%', width: 26, height: 26,
                         cursor: 'pointer',
                       }}
                     >
-                      &times;
+                      ✕
                     </button>
                   </div>
                 ) : (
-                  <div
-                    onClick={() => docInputRef.current?.click()}
-                    style={{
-                      border: '2px dashed var(--color-border, #CBD5E1)',
-                      borderRadius: '12px',
-                      padding: '30px',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      background: 'var(--color-surface, #F6FAF8)',
-                    }}
-                  >
-                    <span style={{ fontSize: '32px' }}>📷</span>
-                    <p style={{ margin: '8px 0 0', fontSize: '13px', color: 'var(--color-text-sub)' }}>
-                      Klik untuk memilih foto dari galeri atau kamera
-                    </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCameraPurpose('doc');
+                        setIsCameraOpen(true);
+                      }}
+                      style={{
+                        flex: 1, padding: '0.75rem', borderRadius: 12, background: '#10B981',
+                        color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.85rem',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      }}
+                    >
+                      📷 Buka Kamera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => docInputRef.current?.click()}
+                      style={{
+                        flex: 1, padding: '0.75rem', borderRadius: 12, background: '#F1F5F9',
+                        color: '#334155', border: '1px solid #E2E8F0', fontWeight: 700,
+                        fontSize: '0.85rem', cursor: 'pointer',
+                      }}
+                    >
+                      📁 Pilih dari File
+                    </button>
                   </div>
                 )}
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4, color: '#475569' }}>
                   Catatan Lapangan (Opsional)
                 </label>
                 <textarea
-                  className="form-input"
-                  style={{ width: '100%', minHeight: '80px', padding: '10px', fontSize: '13px' }}
-                  placeholder="Contoh: Pohon ini agak miring ke barat, daun baru mulai tumbuh lebat."
+                  style={{
+                    width: '100%', borderRadius: 12, padding: '0.6rem', border: '1px solid #CBD5E1',
+                    fontSize: '0.85rem', resize: 'vertical', boxSizing: 'border-box', minHeight: 70,
+                  }}
+                  placeholder="Contoh: Daun baru mulai tumbuh subur..."
                   value={photoDocCatatan}
                   onChange={(e) => setPhotoDocCatatan(e.target.value)}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  className="btn btn-outline btn-sm"
                   onClick={() => setShowPhotoDocModal(false)}
+                  style={{
+                    padding: '0.5rem 1rem', borderRadius: 10, background: '#F1F5F9',
+                    border: 'none', color: '#64748B', fontWeight: 600, cursor: 'pointer',
+                  }}
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary btn-sm"
                   disabled={uploadingDoc || !photoDocFile}
+                  style={{
+                    padding: '0.5rem 1.25rem', borderRadius: 10, background: '#10B981',
+                    color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer',
+                    opacity: (!photoDocFile || uploadingDoc) ? 0.6 : 1,
+                  }}
                 >
-                  {uploadingDoc ? <span className="spinner"></span> : 'Simpan Foto'}
+                  {uploadingDoc ? 'Menyimpan…' : 'Simpan Foto'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* ── Modal: Keterangan & Profil Karakteristik Tanaman ── */}
+      {showProfileModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '1rem', backdropFilter: 'blur(4px)',
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: 24, padding: '24px',
+            maxWidth: 540, width: '100%', boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+            border: '1.5px solid #E2E8F0', maxHeight: '90vh', overflowY: 'auto',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, background: '#ECFDF5',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem',
+                  border: '1px solid #A7F3D0',
+                }}>
+                  {plant.emoji || '🌱'}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
+                    Profil & Karakteristik Tanaman
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                    Informasi agronomis pohon untuk AI & tim perawatan
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                style={{
+                  background: '#F1F5F9', border: 'none', borderRadius: '50%',
+                  width: 32, height: 32, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', color: '#64748B', cursor: 'pointer', fontWeight: 800,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Profile Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: 14, border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700 }}>Nama Tanaman</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A', marginTop: 2 }}>{plant.name}</div>
+              </div>
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: 14, border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700 }}>Jenis / Komoditas</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A', marginTop: 2 }}>{plant.type || '-'}</div>
+              </div>
+              <div style={{ background: '#EFF6FF', padding: '12px 14px', borderRadius: 14, border: '1px solid #BFDBFE' }}>
+                <div style={{ fontSize: '0.7rem', color: '#1D4ED8', fontWeight: 700 }}>Varietas / Kultivar</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1E40AF', marginTop: 2 }}>{plant.varietas || 'Tidak dispesifikasikan'}</div>
+              </div>
+              <div style={{ background: '#ECFDF5', padding: '12px 14px', borderRadius: 14, border: '1px solid #A7F3D0' }}>
+                <div style={{ fontSize: '0.7rem', color: '#047857', fontWeight: 700 }}>Fase Pertumbuhan</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#065F46', marginTop: 2 }}>{plant.fasePertumbuhan || 'Vegetatif'}</div>
+              </div>
+            </div>
+
+            {/* Additional details */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: 14, border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700 }}>🪴 Media Tanam & Tipe Tanah</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginTop: 2 }}>
+                  {plant.mediaTanam || 'Tanah Lempung Berpasir (Standar Kebun)'}
+                </div>
+              </div>
+
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: 14, border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700 }}>📍 Lokasi Kebun / Blok / Bedeng</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginTop: 2 }}>
+                  {plant.lokasiBlok || 'Area Kebun Utama'}
+                </div>
+              </div>
+
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: 14, border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700 }}>💧 Ambang Kelembaban Sensor Optimal</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0284C7', marginTop: 2 }}>
+                  {plant.moistureMin}% – {plant.moistureMax}%
+                </div>
+              </div>
+
+              <div style={{ background: '#FFFBEB', padding: '12px 14px', borderRadius: 14, border: '1px solid #FDE68A' }}>
+                <div style={{ fontSize: '0.7rem', color: '#B45309', fontWeight: 700 }}>📝 Catatan & Riwayat Perlakuan Khusus</div>
+                <div style={{ fontSize: '0.85rem', color: '#78350F', marginTop: 4, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                  {plant.catatan || 'Belum ada catatan perlakuan khusus yang ditambahkan.'}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowProfileModal(false)}
+              className="btn btn-primary w-full"
+              style={{ justifyContent: 'center', borderRadius: 12, padding: '10px' }}
+            >
+              Tutup Informasi
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Modal: Live Camera Capture ── */}
       <CameraCaptureModal
         isOpen={isCameraOpen}
@@ -1208,10 +1177,10 @@ export default function PlantDetailPage() {
         title={cameraPurpose === 'analyze' ? 'Kamera AI Diagnosa Tanaman' : 'Kamera Foto Lapangan'}
         subtitle={
           cameraPurpose === 'analyze'
-            ? 'Arahkan kamera ke daun atau bagian tanaman yang ingin dianalisis'
+            ? 'Ambil foto daun untuk didiagnosa AI secara instan'
             : 'Ambil foto kondisi terkini pohon untuk dokumentasi'
         }
-        confirmLabel={cameraPurpose === 'analyze' ? 'Kirim Foto & Analisa AI' : 'Gunakan Foto Ini'}
+        confirmLabel={cameraPurpose === 'analyze' ? 'Diagnosa dengan AI' : 'Simpan Foto'}
       />
     </Layout>
   );

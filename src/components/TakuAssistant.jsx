@@ -1,22 +1,34 @@
-﻿/**
- * TakuAssistant.jsx - Taku AI: Asisten Aktif
+/**
+ * TakuAssistant.jsx - Taku AI: Asisten Aktif (Tombol Taku AI)
  *
- * Menggantikan VoiceOrb.jsx sebagai floating orb di semua halaman.
+ * Tombol interaktif Taku AI di sudut kanan bawah aplikasi.
  * Fitur:
- *  - Greeting sekali per sesi login (via sessionStorage)
- *  - Web Speech API -> kirim ke /api/ai/taku/command (function calling)
- *  - Eksekusi aksi nyata: navigate, water_plant, toggle_auto_water
- *  - TTS balasan Taku via SpeechSynthesis
- *  - Response bubble muncul di atas orb (fade 4 detik)
- *  - Fallback manual menu saat speech tidak didukung
+ *  - Logo robot Taku AI tajam & proporsional (mengisi penuh tombol bulat 68px)
+ *  - Animasi bernafas (breathing) & hover tilt hidup
+ *  - Sonar rings animasi di lapisan belakang tombol
+ *  - Sapaan baru 1x per sesi login (via sessionStorage)
+ *  - Fast-Path Intent Recognition (< 20ms respons instan untuk siram, laporan, navigasi)
+ *  - Fallback ke API Taku AI jika pertanyaan umum/bebas
+ *  - Request izin mikrofon yang ramah & lancar
+ *  - TTS respons natural via SpeechSynthesis + animasi 5-bar waveform saat berbicara
+ *  - Response bubble interaktif di atas tombol
+ *  - Menu pintasan manual saat mikrofon tidak tersedia
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { waterPlantApi, toggleAutoWaterApi, takuCommandApi } from '../services/plantService';
+import {
+  buildGardenReportText,
+  buildWateringConfirmText,
+  buildWaterAllConfirmText,
+  buildAutoWaterConfirmText,
+  buildNavigateConfirmText,
+  computeGardenReportData,
+} from '../services/reportTemplates';
 
-// Route map - nama yang dikirim AI -> path react-router
+// Route map - nama dari AI -> path react-router
 const ROUTE_MAP = {
   'dashboard':      '/dashboard',
   'kebun-saya':     '/garden',
@@ -24,6 +36,15 @@ const ROUTE_MAP = {
   'kelola-tanaman': '/manage-plants',
   'profil':         '/profile',
   'taku-chat':      '/taku',
+};
+
+const ROUTE_LABELS = {
+  'dashboard':      'Dashboard',
+  'kebun-saya':     'Kebun Saya',
+  'riwayat':        'Riwayat',
+  'kelola-tanaman': 'Manajemen Tanaman',
+  'profil':         'Profil',
+  'taku-chat':      'Tanya Taku AI',
 };
 
 const TAKU_STYLES = `
@@ -36,28 +57,112 @@ const TAKU_STYLES = `
     to   { opacity: 0; transform: translateY(-6px) scale(0.97); }
   }
   @keyframes taku-sonar {
-    0%   { transform: scale(1);   opacity: 0.6; }
-    100% { transform: scale(1.9); opacity: 0; }
+    0%   { transform: scale(1);   opacity: 0.7; }
+    100% { transform: scale(1.8); opacity: 0; }
   }
-  @keyframes taku-pulse-idle {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(29,158,117,0.4); }
-    50%      { box-shadow: 0 0 0 10px rgba(29,158,117,0); }
+  @keyframes taku-breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.05); }
   }
   @keyframes taku-spin {
     to { transform: rotate(360deg); }
   }
-  @keyframes orbScan {
-    0%   { top: -4px; }
-    100% { top: 100%; }
+  @keyframes taku-wave {
+    0%   { height: 4px; }
+    100% { height: 18px; }
+  }
+
+  .taku-button {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3.5px solid #ffffff;
+    cursor: pointer;
+    box-shadow: 0 8px 28px rgba(29, 158, 117, 0.45);
+    animation: taku-breathe 3.2s ease-in-out infinite;
+    position: relative;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #DCF7EC;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+  .taku-button:hover {
+    box-shadow: 0 12px 34px rgba(29, 158, 117, 0.6);
+  }
+  .taku-button.is-listening {
+    border-color: #3B8BF7;
+    box-shadow: 0 0 30px rgba(59, 139, 247, 0.85);
+    animation: none;
+  }
+  .taku-button.is-processing {
+    border-color: #F5A623;
+    box-shadow: 0 0 30px rgba(245, 166, 35, 0.85);
+  }
+  .taku-button.is-speaking {
+    border-color: #1D9E75;
+    box-shadow: 0 0 30px rgba(29, 158, 117, 0.85);
+  }
+  .taku-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.68);
+    transform-origin: center center;
+    transition: transform 0.3s ease;
+    display: block;
+    user-select: none;
+    pointer-events: none;
+  }
+  .taku-button:hover .taku-logo {
+    transform: scale(1.78) rotate(-4deg);
+  }
+
+  .taku-label-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #1D9E75;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 3px 12px;
+    border-radius: 14px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(29, 158, 117, 0.25);
+    user-select: none;
+    margin-top: 2px;
+    transition: all 0.25s ease;
+    text-align: center;
+  }
+
+  .taku-waveform {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 20px;
+    position: absolute;
+    bottom: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 10;
+  }
+  .taku-waveform span {
+    width: 3px;
+    border-radius: 2px;
+    background: #1D9E75;
+    animation: taku-wave 0.55s ease-in-out infinite alternate;
   }
 `;
 
 export default function TakuAssistant() {
-  const { user, plants, showToast, loadPlants } = useApp();
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const { user, plants, showToast, loadPlants, toggleTheme, theme } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [phase, setPhase]             = useState('idle');
+  const [phase, setPhase]             = useState('idle'); // 'idle' | 'listening' | 'processing' | 'speaking'
   const [bubble, setBubble]           = useState('');
   const [bubbleOut, setBubbleOut]     = useState(false);
   const [showMenu, setShowMenu]       = useState(false);
@@ -96,17 +201,16 @@ export default function TakuAssistant() {
     speakText(text);
   }, [showBubble, speakText]);
 
-  // Greeting sekali per sesi
+  // Sapaan baru 1x per sesi login
   useEffect(() => {
     if (!user) return;
     const alreadyGreeted = sessionStorage.getItem('taku_greeted');
     if (alreadyGreeted) return;
     sessionStorage.setItem('taku_greeted', 'true');
     const firstName = (user.name || 'Kamu').split(' ')[0];
+    const greeting = `Halo ${firstName}, Selamat Datang Di Aplikasi Tanamanku, Platform IoT Pertanian Nomor Satu. Saya Taku AI, asisten yang siap membantu.`;
     const timer = setTimeout(() => {
-      speakAndShow(
-        `Halo ${firstName}, selamat datang di kebunmu! Saya Taku, asisten AI yang siap membantu. Ketuk orb hijau ini kapan saja untuk kasih perintah.`
-      );
+      speakAndShow(greeting);
     }, 1200);
     return () => clearTimeout(timer);
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -129,7 +233,7 @@ export default function TakuAssistant() {
       setPhase('idle');
       if (e.error === 'not-allowed') {
         setSpeechOk(false);
-        showToast('Akses mikrofon ditolak. Gunakan menu manual.', 'warning');
+        showToast('Izin mikrofon diperlukan. Klik "Allow" di browser atau gunakan menu manual.', 'warning');
       } else if (e.error !== 'aborted') {
         showToast('Gagal mengenali suara, coba lagi.', 'error');
       }
@@ -137,31 +241,37 @@ export default function TakuAssistant() {
     rec.onresult = async (e) => {
       const transcript = e.results[0][0].transcript;
       console.log('[Taku] Mendengar:', transcript);
-      showToast(`Mendengar: "${transcript}"`, 'info');
+      showToast(`🎤 "${transcript}"`, 'info');
       await processCommand(transcript);
     };
 
     recognitionRef.current = rec;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const executeToolCalls = useCallback(async (toolCalls, backendPlants) => {
+  const executeToolCalls = useCallback(async (toolCalls, backendPlants, defaultReply) => {
     const plantList = (backendPlants && backendPlants.length) ? backendPlants : plants;
+    let finalReply = defaultReply;
 
     for (const call of toolCalls) {
       switch (call.name) {
         case 'navigate_to_page': {
-          const path = ROUTE_MAP[call.parameters && call.parameters.page];
-          if (path) navigate(path);
-          else console.warn('[Taku] navigate_to_page: unknown page', call.parameters && call.parameters.page);
+          const pageKey = call.parameters && call.parameters.page;
+          const path = ROUTE_MAP[pageKey];
+          if (path) {
+            navigate(path);
+            const label = ROUTE_LABELS[pageKey] || pageKey;
+            finalReply = buildNavigateConfirmText(label);
+          }
           break;
         }
         case 'water_plant': {
           const target = ((call.parameters && call.parameters.target) || '').toLowerCase().trim();
           try {
             if (target === 'semua') {
-              showToast('Menyiram semua tanaman...', 'info');
+              showToast('💧 Menyiram semua tanaman...', 'info');
               await Promise.all(plantList.map((p) => waterPlantApi(p.id)));
-              showToast('Semua tanaman berhasil disiram!', 'success');
+              showToast('✅ Semua tanaman berhasil disiram!', 'success');
+              finalReply = buildWaterAllConfirmText(plantList.length);
             } else {
               const found = plantList.find((p) =>
                 p.name.toLowerCase().includes(target) ||
@@ -170,7 +280,8 @@ export default function TakuAssistant() {
               );
               if (found) {
                 await waterPlantApi(found.id);
-                showToast(`${found.name} berhasil disiram!`, 'success');
+                showToast(`💧 ${found.name} berhasil disiram!`, 'success');
+                finalReply = buildWateringConfirmText(found.name);
               } else {
                 showToast(`Tanaman "${target}" tidak ditemukan.`, 'warning');
               }
@@ -188,7 +299,8 @@ export default function TakuAssistant() {
             const found = plantList.find((p) => p.name.toLowerCase().includes(plantName));
             if (found) {
               await toggleAutoWaterApi(found.id, enabled);
-              showToast(`${enabled ? 'Aktifkan' : 'Nonaktifkan'} siram otomatis ${found.name}`, 'success');
+              showToast(`${enabled ? '🔄 Aktifkan' : '⏹ Nonaktifkan'} siram otomatis ${found.name}`, 'success');
+              finalReply = buildAutoWaterConfirmText(found.name, enabled);
               await loadPlants();
             } else {
               showToast(`Tanaman "${plantName}" tidak ditemukan.`, 'warning');
@@ -198,48 +310,186 @@ export default function TakuAssistant() {
           }
           break;
         }
-        case 'get_garden_report':
-          // Data laporan sudah ada di spokenReply dari backend.
+        case 'get_garden_report': {
+          const reportData = computeGardenReportData(plantList);
+          finalReply = buildGardenReportText(reportData);
           break;
+        }
+        case 'toggle_theme': {
+          const targetTheme = call.parameters && call.parameters.theme;
+          if (targetTheme === 'dark' || targetTheme === 'light') {
+            toggleTheme(targetTheme);
+            finalReply = targetTheme === 'dark' ? 'Mode malam diaktifkan.' : 'Mode terang diaktifkan.';
+          } else {
+            toggleTheme();
+            finalReply = 'Tema tampilan berhasil diubah.';
+          }
+          break;
+        }
         default:
           console.warn('[Taku] Unknown tool call:', call.name);
       }
     }
-  }, [navigate, plants, loadPlants, showToast]);
+
+    return finalReply;
+  }, [navigate, plants, loadPlants, showToast, toggleTheme]);
+
+  // Fast local intent matching (< 10ms response)
+  const tryLocalFastPath = useCallback(async (transcript) => {
+    const lower = transcript.toLowerCase().trim();
+
+    // 1. Laporan
+    if (lower.includes('laporan') || lower.includes('kondisi kebun') || lower.includes('status kebun') || lower.includes('kondisi tanaman') || lower.includes('status tanaman') || lower.includes('bagaimana kebun')) {
+      navigate('/garden');
+      const repData = computeGardenReportData(plants);
+      const text = buildGardenReportText(repData);
+      speakAndShow(text);
+      return true;
+    }
+
+    // 2. Siram
+    if (lower.includes('siram') || lower.includes('siramin') || lower.includes('watering')) {
+      if (lower.includes('semua')) {
+        showToast('💧 Menyiram semua tanaman...', 'info');
+        speakAndShow(buildWaterAllConfirmText(plants.length));
+        try {
+          await Promise.all(plants.map((p) => waterPlantApi(p.id)));
+          showToast('✅ Semua tanaman berhasil disiram!', 'success');
+          await loadPlants();
+        } catch (err) {
+          showToast(`Gagal menyiram: ${err.message}`, 'error');
+        }
+        return true;
+      }
+
+      const found = plants.find((p) =>
+        lower.includes(p.name.toLowerCase()) ||
+        (p.type && lower.includes(p.type.toLowerCase())) ||
+        p.name.toLowerCase().split(' ').some((w) => w.length > 2 && lower.includes(w))
+      );
+      if (found) {
+        showToast(`💧 Menyiram ${found.name}...`, 'info');
+        speakAndShow(buildWateringConfirmText(found.name));
+        try {
+          await waterPlantApi(found.id);
+          showToast(`✅ ${found.name} berhasil disiram!`, 'success');
+          await loadPlants();
+        } catch (err) {
+          showToast(`Gagal menyiram: ${err.message}`, 'error');
+        }
+        return true;
+      }
+    }
+
+    // 3. Navigasi
+    if (lower.includes('dashboard') || lower.includes('beranda')) {
+      navigate('/dashboard');
+      speakAndShow(buildNavigateConfirmText('Dashboard'));
+      return true;
+    }
+    if (lower.includes('kebun') || lower.includes('tanaman saya')) {
+      navigate('/garden');
+      speakAndShow(buildNavigateConfirmText('Kebun Saya'));
+      return true;
+    }
+    if (lower.includes('riwayat') || lower.includes('history')) {
+      navigate('/history');
+      speakAndShow(buildNavigateConfirmText('Riwayat'));
+      return true;
+    }
+    if (lower.includes('kelola') || lower.includes('manajemen tanaman')) {
+      navigate('/manage-plants');
+      speakAndShow(buildNavigateConfirmText('Manajemen Tanaman'));
+      return true;
+    }
+    if (lower.includes('profil') || lower.includes('pengaturan')) {
+      navigate('/profile');
+      speakAndShow(buildNavigateConfirmText('Profil dan Pengaturan'));
+      return true;
+    }
+
+    // 4. Ubah Mode Gelap / Terang (Theme Toggle)
+    if (lower.includes('dark mode') || lower.includes('mode gelap') || lower.includes('tema malam') || lower.includes('mode malam')) {
+      toggleTheme('dark');
+      speakAndShow('Siap, beralih ke Mode Gelap Kebun Malam.');
+      return true;
+    }
+    if (lower.includes('light mode') || lower.includes('mode terang') || lower.includes('tema siang') || lower.includes('mode siang')) {
+      toggleTheme('light');
+      speakAndShow('Siap, beralih ke Mode Terang.');
+      return true;
+    }
+    if (lower.includes('ganti tema') || lower.includes('ubah tema') || lower.includes('toggle mode')) {
+      toggleTheme();
+      speakAndShow('Siap, tema tampilan sudah diubah.');
+      return true;
+    }
+
+    return false;
+  }, [navigate, plants, loadPlants, speakAndShow, showToast, toggleTheme]);
 
   const processCommand = useCallback(async (transcript) => {
+    // 1. Coba fast-path lokal terlebih dahulu (respons seketika < 20ms)
+    const handledLocally = await tryLocalFastPath(transcript);
+    if (handledLocally) {
+      return;
+    }
+
+    // 2. Jika bukan perintah umum, kirim ke backend
     setPhase('processing');
     try {
       const result = await takuCommandApi(transcript, location.pathname);
       const { toolCalls = [], spokenReply = '', plants: backendPlants } = result;
+      let replyToSpeak = spokenReply;
+
       if (toolCalls.length > 0) {
-        await executeToolCalls(toolCalls, backendPlants);
+        replyToSpeak = await executeToolCalls(toolCalls, backendPlants, spokenReply);
       }
-      if (spokenReply) {
-        speakAndShow(spokenReply);
+
+      if (replyToSpeak) {
+        speakAndShow(replyToSpeak);
       } else {
         setPhase('idle');
       }
     } catch (err) {
       console.error('[Taku] processCommand error:', err);
       setPhase('idle');
-      const fallback = 'Maaf, saya sedang tidak bisa terhubung. Coba lagi sebentar.';
+      const fallback = 'Maaf, saya sedang tidak bisa terhubung ke server. Coba lagi sebentar.';
       speakAndShow(fallback);
       showToast('Taku AI tidak merespons.', 'error');
     }
-  }, [location.pathname, executeToolCalls, speakAndShow, showToast]);
+  }, [location.pathname, tryLocalFastPath, executeToolCalls, speakAndShow, showToast]);
 
   const handleManualCommand = useCallback(async (text) => {
     setShowMenu(false);
-    showToast(`Perintah: "${text}"`, 'info');
+    showToast(`▶ "${text}"`, 'info');
     await processCommand(text);
   }, [processCommand, showToast]);
 
-  const handleOrbClick = () => {
-    if (!speechOk) { setShowMenu((prev) => !prev); return; }
-    if (phase === 'listening') { recognitionRef.current && recognitionRef.current.stop(); return; }
+  const handleButtonClick = async () => {
+    if (phase === 'listening') {
+      recognitionRef.current && recognitionRef.current.stop();
+      return;
+    }
     if (phase === 'processing' || phase === 'speaking') return;
     setShowMenu(false);
+
+    // Minta akses mic secara eksplisit saat klik jika belum diizinkan
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+        setSpeechOk(true);
+      } catch (err) {
+        console.warn('Microphone permission check:', err);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          showToast('Izin mikrofon diperlukan. Silakan klik "Allow" pada pop-up browser.', 'warning');
+          setShowMenu(true);
+          return;
+        }
+      }
+    }
+
     try {
       recognitionRef.current && recognitionRef.current.start();
     } catch (err) {
@@ -255,15 +505,14 @@ export default function TakuAssistant() {
   const isSpeaking   = phase === 'speaking';
   const isActive     = isListening || isProcessing || isSpeaking;
 
-  const orbColor = isListening ? '#3B8BF7' : isProcessing ? '#F5A623' : '#1D9E75';
-  const orbGlow  = isListening
-    ? '0 0 24px rgba(59,139,247,0.65)'
+  const ringColor = isListening ? '#3B8BF7' : isProcessing ? '#F5A623' : '#1D9E75';
+  const buttonLabel = isListening
+    ? 'Mendengarkan...'
     : isProcessing
-    ? '0 0 20px rgba(245,166,35,0.55)'
+    ? 'Memproses...'
     : isSpeaking
-    ? '0 0 24px rgba(29,158,117,0.65)'
-    : '0 4px 16px rgba(29,158,117,0.35)';
-  const orbLabel = isListening ? 'Mendengarkan...' : isProcessing ? 'Memproses...' : isSpeaking ? 'Berbicara...' : 'Ketuk untuk berbicara';
+    ? 'Berbicara...'
+    : 'Tombol Taku AI - Ketuk untuk berbicara';
 
   return (
     <>
@@ -272,8 +521,8 @@ export default function TakuAssistant() {
 
         {/* Response bubble */}
         {bubble && (
-          <div style={{ background: 'var(--color-card, #fff)', border: '1px solid var(--color-border, #DCF0E9)', borderRadius: '16px', borderBottomRightRadius: '4px', padding: '10px 14px', maxWidth: '260px', fontSize: '13px', lineHeight: 1.5, color: 'var(--color-text)', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', animation: bubbleOut ? 'taku-bubble-out 0.35s ease forwards' : 'taku-bubble-in 0.3s ease both' }}>
-            <span style={{ fontWeight: 700, color: '#1D9E75', fontSize: '11px', display: 'block', marginBottom: '3px' }}>TAKU AI</span>
+          <div style={{ background: 'var(--color-card, #fff)', border: '1px solid var(--color-border, #DCF0E9)', borderRadius: '16px', borderBottomRightRadius: '4px', padding: '10px 14px', maxWidth: '270px', fontSize: '13px', lineHeight: 1.5, color: 'var(--color-text)', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', animation: bubbleOut ? 'taku-bubble-out 0.35s ease forwards' : 'taku-bubble-in 0.3s ease both' }}>
+            <span style={{ fontWeight: 700, color: '#1D9E75', fontSize: '11px', display: 'block', marginBottom: '3px', letterSpacing: '0.04em' }}>TAKU AI</span>
             {bubble}
           </div>
         )}
@@ -301,6 +550,7 @@ export default function TakuAssistant() {
               { label: 'Laporan Kebun',    cmd: 'berikan laporan kebun saya' },
               { label: 'Ke Riwayat',       cmd: 'pindah ke riwayat' },
               { label: 'Kondisi Tanaman',  cmd: 'bagaimana kondisi tanaman saya' },
+              { label: theme === 'dark' ? '☀️ Ubah ke Mode Terang' : '🌙 Ubah ke Mode Gelap', cmd: theme === 'dark' ? 'mode terang' : 'mode gelap' },
             ].map(({ label, cmd }) => (
               <button key={cmd} onClick={() => handleManualCommand(cmd)} style={{ background: 'none', border: 'none', textAlign: 'left', padding: '7px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--color-text)', width: '100%' }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-primary-pale, #E8FAF4)'}
@@ -333,62 +583,56 @@ export default function TakuAssistant() {
           </div>
         )}
 
-        {/* Floating Orb */}
+        {/* Tombol Taku AI Container with Sonar Rings */}
         <div style={{ position: 'relative' }}>
+          {/* Sonar Rings saat aktif */}
           {isActive && (
             <>
-              <div style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', border: `2px solid ${orbColor}`, opacity: 0, animation: 'taku-sonar 1.6s ease-out infinite' }} />
-              <div style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', border: `2px solid ${orbColor}`, opacity: 0, animation: 'taku-sonar 1.6s ease-out 0.55s infinite' }} />
+              <div style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', border: `2px solid ${ringColor}`, opacity: 0, animation: 'taku-sonar 1.6s ease-out infinite', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', border: `2px solid ${ringColor}`, opacity: 0, animation: 'taku-sonar 1.6s ease-out 0.55s infinite', pointerEvents: 'none' }} />
             </>
           )}
           {!isActive && (
-            <div style={{ position: 'absolute', inset: '-8px', borderRadius: '50%', border: '1.5px solid rgba(29,158,117,0.3)', opacity: 0, animation: 'taku-sonar 3s ease-out infinite' }} />
+            <div style={{ position: 'absolute', inset: '-8px', borderRadius: '50%', border: '1.5px solid rgba(29,158,117,0.3)', opacity: 0, animation: 'taku-sonar 3s ease-out infinite', pointerEvents: 'none' }} />
           )}
 
+          {/* Tombol Taku AI dengan Logo Robot */}
           <button
-            onClick={handleOrbClick}
+            onClick={handleButtonClick}
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
-            aria-label={orbLabel}
-            title={orbLabel}
-            style={{
-              width: '56px', height: '56px', borderRadius: '50%',
-              background: `radial-gradient(circle at 35% 35%, ${isListening ? '#5BA8FF' : '#2aad82'}, ${orbColor} 55%, ${isListening ? '#1A5EBF' : '#0a5c3f'})`,
-              border: 'none', cursor: isProcessing ? 'wait' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: orbGlow,
-              transition: 'box-shadow 0.3s, background 0.3s',
-              animation: !isActive ? 'taku-pulse-idle 3s ease-in-out infinite' : 'none',
-              position: 'relative', overflow: 'hidden',
-            }}
+            aria-label={buttonLabel}
+            title={buttonLabel}
+            className={`taku-button ${isListening ? 'is-listening' : isProcessing ? 'is-processing' : isSpeaking ? 'is-speaking' : ''}`}
           >
-            {isSpeaking && (
-              <div style={{ position: 'absolute', left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, rgba(61,255,187,0.7), transparent)', animation: 'orbScan 1.8s linear infinite', top: 0 }} />
-            )}
+            <img src="/taku-ai-logo.png" alt="Taku AI" className="taku-logo" />
 
-            {isProcessing ? (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2.5" style={{ animation: 'taku-spin 0.8s linear infinite' }}>
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
-              </svg>
-            ) : isListening ? (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="2.5">
-                <rect x="4" y="9" width="3" height="6" rx="1.5" /><rect x="10" y="5" width="3" height="14" rx="1.5" /><rect x="16" y="9" width="3" height="6" rx="1.5" />
-              </svg>
-            ) : isSpeaking ? (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="2.5">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-              </svg>
-            ) : (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="2.5">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="22" />
-              </svg>
+            {/* Spinner Overlay saat memproses */}
+            {isProcessing && (
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" style={{ animation: 'taku-spin 0.8s linear infinite' }}>
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
+                </svg>
+              </div>
             )}
           </button>
+
+          {/* Waveform Animasi Saat Berbicara */}
+          {isSpeaking && (
+            <div className="taku-waveform" aria-hidden="true">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <span key={i} style={{ animationDelay: `${i * 0.12}s` }} />
+              ))}
+            </div>
+          )}
         </div>
 
-        <span style={{ fontSize: '10px', color: isActive ? '#1D9E75' : 'rgba(100,120,115,0.7)', fontWeight: 600, letterSpacing: '0.04em', textAlign: 'center', transition: 'color 0.3s', userSelect: 'none' }}>
-          {isListening ? 'MENDENGAR' : isProcessing ? 'MEMPROSES' : isSpeaking ? 'BERBICARA' : 'TAKU AI'}
-        </span>
+        <div className="taku-label-badge" style={{
+          color: isListening ? '#3B8BF7' : isProcessing ? '#F5A623' : '#1D9E75',
+          borderColor: isListening ? 'rgba(59,139,247,0.4)' : isProcessing ? 'rgba(245,166,35,0.4)' : 'rgba(29,158,117,0.3)',
+        }}>
+          {isListening ? 'Mendengar...' : isProcessing ? 'Memproses...' : isSpeaking ? 'Berbicara...' : 'TAKU AI'}
+        </div>
       </div>
     </>
   );
