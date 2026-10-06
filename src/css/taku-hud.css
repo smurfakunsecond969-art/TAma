@@ -337,4 +337,183 @@ body.taku-directing .taku-core { filter: drop-shadow(0 0 10px currentColor); }
   .taku-confirm { bottom: 190px; }
   .taku-ticker { display: none; }
   .taku-chapter { top: 64px; left: 10px; font-size: 11px; }
+  .jarvis-holo-stream { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   JARVIS IDLE LIVING LABORATORY (Real-Time Ambient Motion)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Keyframes ───────────────────────────────────────────── */
+@keyframes jarvis-radar-sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes jarvis-card-scan {
+  0% {
+    top: -10%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+  }
+}
+
+@keyframes jarvis-pulse-subtle {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes jarvis-stream-drift {
+  0% {
+    transform: translateY(0px) translateX(0px);
+  }
+  50% {
+    transform: translateY(-8px) translateX(4px);
+  }
+  100% {
+    transform: translateY(0px) translateX(0px);
+  }
+}
+
+@keyframes jarvis-wave-pulse {
+  0%, 100% {
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dashoffset: 24;
+  }
+}
+
+/* ── Corner Reticles (⌜ ⌝ ⌞ ⌟) ────────────────────────── */
+.jarvis-corner-box {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.jarvis-corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--taku-cyan);
+  opacity: 0.55;
+  transition: opacity 0.3s ease, border-color 0.3s ease;
+  pointer-events: none;
+}
+.jarvis-corner.tl {
+  top: 4px; left: 4px;
+  border-right: 0; border-bottom: 0;
+  border-top-left-radius: 4px;
+}
+.jarvis-corner.tr {
+  top: 4px; right: 4px;
+  border-left: 0; border-bottom: 0;
+  border-top-right-radius: 4px;
+}
+.jarvis-corner.bl {
+  bottom: 4px; left: 4px;
+  border-right: 0; border-top: 0;
+  border-bottom-left-radius: 4px;
+}
+.jarvis-corner.br {
+  bottom: 4px; right: 4px;
+  border-left: 0; border-top: 0;
+  border-bottom-right-radius: 4px;
+}
+
+.plant-card:hover .jarvis-corner,
+.telemetry-card:hover .jarvis-corner {
+  opacity: 1;
+  border-color: #10B981;
+}
+
+/* ── Periodic Diagnostic Scanline on Cards ─────────────── */
+.jarvis-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--taku-cyan), #10B981, transparent);
+  box-shadow: 0 0 10px rgba(34, 228, 208, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  animation: jarvis-card-scan 7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* ── Live Telemetry Status Chips ───────────────────────── */
+.jarvis-telemetry-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--taku-cyan);
+  background: rgba(4, 32, 27, 0.08);
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(34, 228, 208, 0.3);
+  user-select: none;
+}
+[data-theme='dark'] .jarvis-telemetry-badge {
+  background: rgba(34, 228, 208, 0.1);
+}
+
+.jarvis-ping-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--taku-cyan);
+  box-shadow: 0 0 6px var(--taku-cyan);
+  animation: jarvis-pulse-subtle 1.8s ease-in-out infinite;
+}
+
+/* ── Background Floating Hologram Streamers ─────────────── */
+.jarvis-holo-stream {
+  position: fixed;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--taku-cyan);
+  opacity: 0.38;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: jarvis-stream-drift 10s ease-in-out infinite alternate;
+}
+.jarvis-holo-stream.top-left {
+  top: 90px;
+  left: 280px;
+}
+.jarvis-holo-stream.bottom-right {
+  bottom: 120px;
+  right: 120px;
+  animation-delay: -5s;
+  text-align: right;
+}
+[data-theme='dark'] .jarvis-holo-stream {
+  opacity: 0.55;
+}
+

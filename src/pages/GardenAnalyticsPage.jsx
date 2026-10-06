@@ -8,6 +8,7 @@ import {
   resolveCheckinApi,
   fetchTreatmentHistoryApi,
 } from '../services/plantService';
+import JarvisReticle from '../components/taku/JarvisReticle';
 
 // ── Helpers & Styling ────────────────────────────────────────
 
@@ -87,6 +88,9 @@ function GardenTotalRadialChart({ score, hasData }) {
 
   return (
     <div style={{ position: 'relative', width: 220, height: 200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* JARVIS Calibration Reticle & Radar Sweep */}
+      <JarvisReticle size={206} color={grade.color} radar={true} />
+
       {/* Decorative breathing aura ring */}
       <div style={{
         position: 'absolute', width: 196, height: 196, borderRadius: '50%',

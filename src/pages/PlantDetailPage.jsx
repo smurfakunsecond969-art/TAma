@@ -12,6 +12,7 @@ import {
   addPlantPhotoDocApi,
   fetchPlantPhotosApi,
 } from '../services/plantService';
+import JarvisReticle from '../components/taku/JarvisReticle';
 import '../css/app.css';
 
 export default function PlantDetailPage() {
@@ -512,15 +513,32 @@ export default function PlantDetailPage() {
             
             {/* Current Moisture Gauge Card */}
             <div style={{
+              position: 'relative', overflow: 'hidden',
               background: '#FFFFFF', borderRadius: 20, padding: '1.25rem',
               border: '1.5px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
             }}>
-              <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 800, color: '#0F172A' }}>
-                💧 Kelembaban Tanah Saat Ini
-              </h3>
+              {/* JARVIS Corner Sci-Fi Brackets */}
+              <div className="jarvis-corner-box">
+                <i className="jarvis-corner tl" />
+                <i className="jarvis-corner tr" />
+                <i className="jarvis-corner bl" />
+                <i className="jarvis-corner br" />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0F172A' }}>
+                  💧 Kelembaban Tanah Saat Ini
+                </h3>
+                <span className="jarvis-telemetry-badge">
+                  <span className="jarvis-ping-dot" /> LIVE SENSOR PROBE
+                </span>
+              </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1rem' }}>
                 <div data-taku="moisture-gauge" style={{ position: 'relative', width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {/* JARVIS Holographic Calibration Reticle & Radar Sweep */}
+                  <JarvisReticle size={148} color={mColor} radar={true} />
+
                   {/* Decorative breathing aura ring */}
                   <div style={{
                     position: 'absolute', inset: 0, borderRadius: '50%',

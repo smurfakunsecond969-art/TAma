@@ -4,6 +4,8 @@ import { useApp } from '../context/AppContext';
 import Layout from '../components/Layout';
 import { waterPlantApi, fetchGardenAnalyticsApi } from '../services/plantService';
 import CountUp from '../components/CountUp';
+import JarvisReticle from '../components/taku/JarvisReticle';
+import LiveOscillator from '../components/taku/LiveOscillator';
 import '../css/app.css';
 
 // ── Helpers Penilaian Skor Kebun (100% Identik dengan GardenAnalyticsPage) ──
@@ -340,7 +342,10 @@ export default function DashboardPage() {
                 position: 'relative', width: 88, height: 88, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: 'rotate(-90deg)' }}>
+                {/* JARVIS Rotating Reticle & Radar Sweep */}
+                <JarvisReticle size={114} color={gardenGrade.color} radar={true} />
+
+                <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
                   <circle cx="44" cy="44" r="36" stroke="var(--color-border)" strokeWidth="8" fill="none" />
                   <circle
                     cx="44" cy="44" r="36"
@@ -353,7 +358,7 @@ export default function DashboardPage() {
                     style={{ transition: 'stroke-dashoffset 1.2s ease-out' }}
                   />
                 </svg>
-                <div style={{ position: 'absolute', textAlign: 'center' }}>
+                <div style={{ position: 'absolute', textAlign: 'center', zIndex: 2 }}>
                   <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--color-text)', lineHeight: 1 }}>
                     <CountUp to={hasAnyData && gardenScore !== null ? gardenScore : null} duration={900} fallback="--" />
                   </div>
@@ -363,10 +368,17 @@ export default function DashboardPage() {
 
               <div>
                 <div style={{
-                  fontSize: '0.72rem', fontWeight: 800, color: gardenGrade.color,
-                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  display: 'flex', alignItems: 'center', gap: 6,
                 }}>
-                  Indeks Kesehatan Kebun
+                  <span style={{
+                    fontSize: '0.72rem', fontWeight: 800, color: gardenGrade.color,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                  }}>
+                    Indeks Kesehatan Kebun
+                  </span>
+                  <span className="jarvis-telemetry-badge" style={{ fontSize: '8px' }}>
+                    <span className="jarvis-ping-dot" /> LIVE PROBE
+                  </span>
                 </div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--color-text)', marginTop: 2 }}>
                   {gardenGrade.label}
@@ -382,32 +394,47 @@ export default function DashboardPage() {
               className="telemetry-card"
               data-taku="telemetry"
               style={{
-                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12,
+                position: 'relative',
+                display: 'flex', flexDirection: 'column', gap: 10,
                 background: 'var(--color-card)', padding: '16px 20px', borderRadius: 18,
                 border: '1.5px solid var(--color-border)', boxShadow: 'var(--shadow-xs)',
+                overflow: 'hidden',
               }}
             >
-              <div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>Total Tanaman</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--color-text)', marginTop: 2 }}>
-                  <CountUp to={totalPlants} duration={850} suffix=" Pohon" />
-                </div>
-                <div style={{ fontSize: '0.68rem', color: '#10B981', fontWeight: 600 }}>Terdaftar</div>
+              {/* Corner Sci-Fi Brackets */}
+              <div className="jarvis-corner-box">
+                <i className="jarvis-corner tl" />
+                <i className="jarvis-corner tr" />
+                <i className="jarvis-corner bl" />
+                <i className="jarvis-corner br" />
               </div>
-              <div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>Kelembaban Rata²</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3B8BF7', marginTop: 2 }}>
-                  <CountUp to={avgMoisture} duration={900} suffix="%" fallback="--" />
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>Total Tanaman</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--color-text)', marginTop: 2 }}>
+                    <CountUp to={totalPlants} duration={850} suffix=" Pohon" />
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#10B981', fontWeight: 600 }}>Terdaftar</div>
                 </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>Sensor Tanah</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>Koneksi IoT</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10B981', marginTop: 2 }}>
-                  <CountUp to={totalPlants - noSensorCount} duration={800} />/{totalPlants}
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>Kelembaban Rata²</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3B8BF7', marginTop: 2 }}>
+                    <CountUp to={avgMoisture} duration={900} suffix="%" fallback="--" />
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>Sensor Tanah</div>
                 </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>Unit Aktif</div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>Koneksi IoT</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10B981', marginTop: 2 }}>
+                    <CountUp to={totalPlants - noSensorCount} duration={800} />/{totalPlants}
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>Unit Aktif</div>
+                </div>
               </div>
+
+              {/* JARVIS Live Signal Oscillator Sparkline */}
+              <LiveOscillator label="LORA / MQTT TELEMETRY" frequency="915MHz ACTIVE" />
             </div>
 
           </div>
@@ -582,6 +609,17 @@ export default function DashboardPage() {
                   onMouseMove={handleTiltMove}
                   onMouseLeave={handleTiltLeave}
                 >
+                  {/* JARVIS Corner Sci-Fi Brackets */}
+                  <div className="jarvis-corner-box">
+                    <i className="jarvis-corner tl" />
+                    <i className="jarvis-corner tr" />
+                    <i className="jarvis-corner bl" />
+                    <i className="jarvis-corner br" />
+                  </div>
+
+                  {/* Periodic JARVIS Diagnostic Scanline */}
+                  <div className="jarvis-scanline" style={{ animationDelay: `${(index % 6) * 1.2}s` }} />
+
                   {/* Top status accent border */}
                   <div style={{
                     height: 4, width: '100%',

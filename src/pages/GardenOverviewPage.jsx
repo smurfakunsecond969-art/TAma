@@ -911,12 +911,24 @@ export default function GardenOverviewPage() {
                   className="motion-card-float-in"
                   style={{
                     animationDelay: `${idx * 0.05}s`,
+                    position: 'relative', overflow: 'hidden',
                     background: '#FFFFFF', borderRadius: 20, border: '1.5px solid #E2E8F0',
                     padding: '1.25rem', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
                     display: 'flex', flexDirection: 'column', gap: '0.85rem',
                     transition: 'transform 0.2s, box-shadow 0.2s',
                   }}
                 >
+                  {/* JARVIS Corner Sci-Fi Brackets */}
+                  <div className="jarvis-corner-box">
+                    <i className="jarvis-corner tl" />
+                    <i className="jarvis-corner tr" />
+                    <i className="jarvis-corner bl" />
+                    <i className="jarvis-corner br" />
+                  </div>
+
+                  {/* Periodic JARVIS Diagnostic Scanline */}
+                  <div className="jarvis-scanline" style={{ animationDelay: `${(idx % 6) * 1.3}s` }} />
+
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                       {plant.latestPhoto?.url ? (

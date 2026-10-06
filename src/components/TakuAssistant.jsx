@@ -656,14 +656,20 @@ export default function TakuAssistant() {
             )}
           </button>
 
-          {/* Waveform Animasi Saat Berbicara */}
-          {isSpeaking && (
+          {/* Waveform Animasi Saat Berbicara atau Standby Monitoring */}
+          {isSpeaking ? (
             <div className="taku-waveform" aria-hidden="true">
               {[0, 1, 2, 3, 4].map((i) => (
                 <span key={i} style={{ animationDelay: `${i * 0.12}s` }} />
               ))}
             </div>
-          )}
+          ) : !isActive ? (
+            <div className="taku-waveform taku-idle-waveform" aria-hidden="true" style={{ opacity: 0.45, transform: 'translateX(-50%) scale(0.7)' }}>
+              {[0, 1, 2].map((i) => (
+                <span key={i} style={{ animation: 'taku-wave 1.6s ease-in-out infinite alternate', animationDelay: `${i * 0.35}s`, background: '#22E4D0' }} />
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="taku-label-badge" style={{
