@@ -4,9 +4,9 @@
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  --taku-cyan: #22e4d0;
-  --taku-green: #1d9e75;
-  --taku-hud-text: #d9fff7;
+  --taku-cyan: #00FF87; /* Holographic Bioluminescent Cyber-Emerald */
+  --taku-green: #10B981;
+  --taku-hud-text: #E6FFF6;
 }
 
 /* ── Keyframes ───────────────────────────────────────────── */
@@ -98,22 +98,22 @@ body.taku-directing .taku-core { filter: drop-shadow(0 0 10px currentColor); }
 .taku-hud-grid {
   position: absolute;
   inset: 0;
-  opacity: .5;
+  opacity: .45;
   background-image:
-    linear-gradient(rgba(34, 228, 208, .07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 228, 208, .07) 1px, transparent 1px);
+    linear-gradient(rgba(0, 255, 135, .08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 135, .08) 1px, transparent 1px);
   background-size: 48px 48px;
   animation: taku-grid-drift 40s linear infinite;
   mask-image: radial-gradient(ellipse at 70% 20%, #000 0%, transparent 70%);
   -webkit-mask-image: radial-gradient(ellipse at 70% 20%, #000 0%, transparent 70%);
 }
-[data-theme='dark'] .taku-hud-grid { opacity: .9; }
+[data-theme='dark'] .taku-hud-grid { opacity: .85; }
 .taku-hud-scan {
   position: absolute;
   left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--taku-cyan), transparent);
-  box-shadow: 0 0 14px 2px rgba(34, 228, 208, .35);
+  background: linear-gradient(90deg, transparent, #00FF87, #10B981, transparent);
+  box-shadow: 0 0 18px 3px rgba(0, 255, 135, .45);
   animation: taku-scan-down 9s ease-in-out infinite;
 }
 
@@ -451,69 +451,20 @@ body.taku-directing .taku-core { filter: drop-shadow(0 0 10px currentColor); }
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--taku-cyan), #10B981, transparent);
-  box-shadow: 0 0 10px rgba(34, 228, 208, 0.6);
+  background: linear-gradient(90deg, transparent, #00FF87, #10B981, transparent);
+  box-shadow: 0 0 14px rgba(0, 255, 135, 0.75);
   opacity: 0;
   pointer-events: none;
   animation: jarvis-card-scan 7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-/* ── Live Telemetry Status Chips ───────────────────────── */
-.jarvis-telemetry-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--taku-cyan);
-  background: rgba(4, 32, 27, 0.08);
-  padding: 2px 7px;
-  border-radius: 6px;
-  border: 1px solid rgba(34, 228, 208, 0.3);
-  user-select: none;
-}
-[data-theme='dark'] .jarvis-telemetry-badge {
-  background: rgba(34, 228, 208, 0.1);
 }
 
 .jarvis-ping-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--taku-cyan);
-  box-shadow: 0 0 6px var(--taku-cyan);
+  background: var(--taku-cyan, #00FF87);
+  box-shadow: 0 0 8px var(--taku-cyan, #00FF87);
   animation: jarvis-pulse-subtle 1.8s ease-in-out infinite;
 }
 
-/* ── Background Floating Hologram Streamers ─────────────── */
-.jarvis-holo-stream {
-  position: fixed;
-  z-index: 1;
-  pointer-events: none;
-  user-select: none;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: var(--taku-cyan);
-  opacity: 0.38;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  animation: jarvis-stream-drift 10s ease-in-out infinite alternate;
-}
-.jarvis-holo-stream.top-left {
-  top: 90px;
-  left: 280px;
-}
-.jarvis-holo-stream.bottom-right {
-  bottom: 120px;
-  right: 120px;
-  animation-delay: -5s;
-  text-align: right;
-}
-[data-theme='dark'] .jarvis-holo-stream {
-  opacity: 0.55;
-}
 

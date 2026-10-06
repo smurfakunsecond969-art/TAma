@@ -58,15 +58,6 @@ function Subtitle({ subtitle }) {
   );
 }
 
-function Clock() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return <>{now.toLocaleTimeString('id-ID', { hour12: false })}</>;
-}
-
 export default function TakuHUD() {
   const tk = useTakuState();
 
@@ -98,28 +89,10 @@ export default function TakuHUD() {
 
   return (
     <>
-      {/* Latar idle */}
+      {/* Latar idle — Murni animasi grid holografik & laser scanline halus */}
       <div className="taku-hud-bg" aria-hidden="true">
         <div className="taku-hud-grid" />
         <div className="taku-hud-scan" />
-
-        {/* Ambient JARVIS Telemetry Streamers */}
-        <div className="jarvis-holo-stream top-left">
-          <span>// SECTOR: GREENHOUSE_01</span>
-          <span>[ANLZ_ENGINE: ACTIVE // 60FPS]</span>
-          <span>&gt; SENSOR_BUS: LORA_915MHz SYNCED</span>
-        </div>
-
-        <div className="jarvis-holo-stream bottom-right">
-          <span>[AI_HEURISTICS: JARVIS_AGRONOMY]</span>
-          <span>DIAGNOSTIC_POLL: CONTINUOUS</span>
-          <span>&gt; SYS_HEALTH: 100% NOMINAL</span>
-        </div>
-      </div>
-
-      <div className="taku-ticker" aria-hidden="true">
-        <span className="live-dot" />
-        <span>SENSOR LINK OK · <Clock /> · SYS NOMINAL</span>
       </div>
 
       <div className={`taku-vignette ${active ? 'on' : ''}`} aria-hidden="true" />

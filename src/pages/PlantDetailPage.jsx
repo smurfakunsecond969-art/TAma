@@ -529,9 +529,6 @@ export default function PlantDetailPage() {
                 <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0F172A' }}>
                   💧 Kelembaban Tanah Saat Ini
                 </h3>
-                <span className="jarvis-telemetry-badge">
-                  <span className="jarvis-ping-dot" /> LIVE SENSOR PROBE
-                </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1rem' }}>

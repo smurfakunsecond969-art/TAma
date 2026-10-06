@@ -9,7 +9,7 @@ import React from 'react';
 
 export default function JarvisReticle({
   size = 120,
-  color = 'var(--taku-cyan, #22E4D0)',
+  color = '#00FF87',
   radar = true,
   style = {},
 }) {
@@ -41,7 +41,7 @@ export default function JarvisReticle({
             width: `${rMiddle * 2}px`,
             height: `${rMiddle * 2}px`,
             borderRadius: '50%',
-            background: `conic-gradient(from 0deg, transparent 70%, rgba(34, 228, 208, 0.18) 100%)`,
+            background: `conic-gradient(from 0deg, transparent 65%, rgba(0, 255, 135, 0.28) 100%)`,
             animation: 'jarvis-radar-sweep 8s linear infinite',
             pointerEvents: 'none',
           }}

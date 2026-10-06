@@ -7,65 +7,47 @@
 import React from 'react';
 
 export default function LiveOscillator({
-  label = 'TELEMETRY LINK',
-  frequency = '915MHz',
-  color = 'var(--taku-cyan, #22E4D0)',
+  color = '#00FF87',
   style = {},
 }) {
   return (
     <div
       style={{
         display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
+        alignItems: 'center',
+        gap: '8px',
         marginTop: '6px',
         userSelect: 'none',
         ...style,
       }}
       aria-hidden="true"
     >
+      <span className="jarvis-ping-dot" style={{ background: color, boxShadow: `0 0 8px ${color}`, flexShrink: 0 }} />
+
       {/* Waveform SVG */}
-      <div style={{ position: 'relative', width: '100%', height: '16px', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', height: '14px', overflow: 'hidden' }}>
         <svg
-          viewBox="0 0 160 16"
+          viewBox="0 0 160 14"
           preserveAspectRatio="none"
           style={{ width: '100%', height: '100%', display: 'block' }}
         >
           {/* Static background grid line */}
-          <line x1="0" y1="8" x2="160" y2="8" stroke={color} strokeOpacity="0.15" strokeWidth="1" strokeDasharray="2 3" />
+          <line x1="0" y1="7" x2="160" y2="7" stroke={color} strokeOpacity="0.15" strokeWidth="1" strokeDasharray="2 3" />
           
           {/* Animated Sine / Oscilloscope Pulse */}
           <path
-            d="M 0 8 Q 15 2, 30 8 T 60 8 T 90 2 T 105 14 T 120 8 T 160 8"
+            d="M 0 7 Q 15 1, 30 7 T 60 7 T 90 1 T 105 13 T 120 7 T 160 7"
             fill="none"
             stroke={color}
-            strokeWidth="1.6"
+            strokeWidth="1.8"
             strokeLinecap="round"
             strokeDasharray="60 12"
             style={{
+              filter: `drop-shadow(0 0 4px ${color})`,
               animation: 'jarvis-wave-pulse 2.2s ease-in-out infinite',
             }}
           />
         </svg>
-      </div>
-
-      {/* Mini Telemetry Status Footer */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: '9px',
-          fontFamily: "'JetBrains Mono', 'Consolas', monospace",
-          color: 'var(--color-text-muted, #64748B)',
-          letterSpacing: '0.04em',
-        }}
-      >
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-          <span className="jarvis-ping-dot" />
-          <span style={{ color: color, fontWeight: 700 }}>{label}</span>
-        </span>
-        <span style={{ opacity: 0.75 }}>{frequency}</span>
       </div>
     </div>
   );

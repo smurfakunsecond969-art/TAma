@@ -376,9 +376,6 @@ export default function DashboardPage() {
                   }}>
                     Indeks Kesehatan Kebun
                   </span>
-                  <span className="jarvis-telemetry-badge" style={{ fontSize: '8px' }}>
-                    <span className="jarvis-ping-dot" /> LIVE PROBE
-                  </span>
                 </div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--color-text)', marginTop: 2 }}>
                   {gardenGrade.label}
@@ -434,7 +431,7 @@ export default function DashboardPage() {
               </div>
 
               {/* JARVIS Live Signal Oscillator Sparkline */}
-              <LiveOscillator label="LORA / MQTT TELEMETRY" frequency="915MHz ACTIVE" />
+              <LiveOscillator />
             </div>
 
           </div>
