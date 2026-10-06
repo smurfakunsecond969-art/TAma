@@ -27,6 +27,7 @@ import {
   buildNavigateConfirmText,
   computeGardenReportData,
 } from '../services/reportTemplates';
+import { speakText as takuSpeakText, stopSpeech } from '../services/takuAiService';
 
 // Route map - nama dari AI -> path react-router
 const ROUTE_MAP = {
@@ -173,17 +174,13 @@ export default function TakuAssistant() {
   const bubbleTimer    = useRef(null);
   const synthRef       = useRef(window.speechSynthesis);
 
-  const speakText = useCallback((text) => {
+  const speakText = useCallback((text, preset = 'normal') => {
     if (!('speechSynthesis' in window)) return;
-    synthRef.current.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang  = 'id-ID';
-    utt.rate  = 1.05;
-    utt.pitch = 1.05;
-    utt.onstart = () => setPhase('speaking');
-    utt.onend   = () => setPhase('idle');
-    utt.onerror = () => setPhase('idle');
-    synthRef.current.speak(utt);
+    takuSpeakText(text, preset, {
+      onStart: () => setPhase('speaking'),
+      onEnd: () => setPhase('idle'),
+      onError: () => setPhase('idle'),
+    });
   }, []);
 
   const showBubble = useCallback((text) => {
@@ -196,24 +193,24 @@ export default function TakuAssistant() {
     }, 4500);
   }, []);
 
-  const speakAndShow = useCallback((text) => {
+  const speakAndShow = useCallback((text, preset = 'normal') => {
     showBubble(text);
-    speakText(text);
+    speakText(text, preset);
   }, [showBubble, speakText]);
 
-  // Sapaan baru 1x per sesi login
+  // Sapaan baru 1x per sesi login (Opsi A — Jarvis Style)
   useEffect(() => {
     if (!user) return;
     const alreadyGreeted = sessionStorage.getItem('taku_greeted');
     if (alreadyGreeted) return;
     sessionStorage.setItem('taku_greeted', 'true');
-    const firstName = (user.name || 'Kamu').split(' ')[0];
-    const greeting = `Halo ${firstName}, Selamat Datang Di Aplikasi Tanamanku, Platform IoT Pertanian Nomor Satu. Saya Taku AI, asisten yang siap membantu.`;
+    const firstName = (user.name || 'Sahabat').split(' ')[0];
+    const greeting = `Selamat datang, ${firstName}. Sistem aktif, semua sensor terhubung. Saya Taku, siap bantu apa pun yang kamu butuhkan di kebun hari ini.`;
     const timer = setTimeout(() => {
-      speakAndShow(greeting);
+      speakAndShow(greeting, 'greeting');
     }, 1200);
     return () => clearTimeout(timer);
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, speakAndShow]);
 
   // Setup Web Speech Recognition
   useEffect(() => {
@@ -343,7 +340,7 @@ export default function TakuAssistant() {
       navigate('/garden');
       const repData = computeGardenReportData(plants);
       const text = buildGardenReportText(repData);
-      speakAndShow(text);
+      speakAndShow(text, 'report');
       return true;
     }
 

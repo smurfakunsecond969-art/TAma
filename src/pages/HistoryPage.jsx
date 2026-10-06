@@ -7,6 +7,7 @@ import {
   fetchPhotosHistoryApi,
   analyzePlantPhotoApi,
 } from '../services/plantService';
+import CountUp from '../components/CountUp';
 import '../css/app.css';
 
 export default function HistoryPage() {
@@ -184,7 +185,7 @@ export default function HistoryPage() {
         <div style={{ display: 'flex', gap: '8px', background: 'var(--color-surface, #F6FAF8)', padding: '4px', borderRadius: '14px', border: '1px solid var(--color-border, #E2E8F0)' }}>
           <button
             onClick={() => setActiveTab('irrigation')}
-            className="btn btn-sm"
+            className="btn btn-sm interactive-tap"
             style={{
               background: activeTab === 'irrigation' ? '#FFFFFF' : 'transparent',
               color: activeTab === 'irrigation' ? 'var(--color-primary, #1D9E75)' : 'var(--color-text-sub)',
@@ -192,13 +193,14 @@ export default function HistoryPage() {
               boxShadow: activeTab === 'irrigation' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
               borderRadius: '10px',
               padding: '8px 16px',
+              transition: 'all 0.25s ease',
             }}
           >
             💧 Riwayat Penyiraman ({totalCount})
           </button>
           <button
             onClick={() => setActiveTab('photos')}
-            className="btn btn-sm"
+            className="btn btn-sm interactive-tap"
             style={{
               background: activeTab === 'photos' ? '#FFFFFF' : 'transparent',
               color: activeTab === 'photos' ? '#9333EA' : 'var(--color-text-sub)',
@@ -206,6 +208,7 @@ export default function HistoryPage() {
               boxShadow: activeTab === 'photos' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
               borderRadius: '10px',
               padding: '8px 16px',
+              transition: 'all 0.25s ease',
             }}
           >
             📸 Foto &amp; Diagnosa AI ({totalPhotosCount})
@@ -214,7 +217,7 @@ export default function HistoryPage() {
 
         <button
           onClick={handleOpenPhotoCapture}
-          className="btn btn-sm"
+          className="btn btn-sm interactive-tap"
           style={{
             background: 'linear-gradient(135deg, #7E22CE, #9333EA)',
             color: '#fff',
@@ -243,7 +246,7 @@ export default function HistoryPage() {
                 </svg>
               </div>
               <div>
-                <div className="summary-count">{totalCount}</div>
+                <div className="summary-count"><CountUp to={totalCount} duration={750} /></div>
                 <div className="summary-label">Total Siram</div>
               </div>
             </div>
@@ -255,7 +258,7 @@ export default function HistoryPage() {
                 </svg>
               </div>
               <div>
-                <div className="summary-count">{autoCount}</div>
+                <div className="summary-count"><CountUp to={autoCount} duration={750} /></div>
                 <div className="summary-label">Siram Otomatis</div>
               </div>
             </div>
@@ -266,7 +269,7 @@ export default function HistoryPage() {
                 </svg>
               </div>
               <div>
-                <div className="summary-count">{manualCount}</div>
+                <div className="summary-count"><CountUp to={manualCount} duration={750} /></div>
                 <div className="summary-label">Siram Manual</div>
               </div>
             </div>
@@ -346,10 +349,14 @@ export default function HistoryPage() {
                 <div className="timeline-day" key={date}>
                   <div className="timeline-day-header">{date}</div>
                   <div className="timeline-items">
-                    {items.map((log) => {
+                    {items.map((log, idx) => {
                       const isAuto = log.type === 'auto';
                       return (
-                        <div className="timeline-item" key={log.id}>
+                        <div
+                          className="timeline-item motion-fade-slide-up"
+                          key={log.id}
+                          style={{ animationDelay: `${idx * 0.04}s` }}
+                        >
                           {/* Photo thumbnail or icon */}
                           {log.plantPhoto ? (
                             <div
@@ -475,7 +482,7 @@ export default function HistoryPage() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-              {photosHistory.map((item) => {
+              {photosHistory.map((item, idx) => {
                 const statusColor = item.analysis?.status === 'sehat'
                   ? '#1D9E75'
                   : item.analysis?.status === 'terindikasi_penyakit'
@@ -492,7 +499,9 @@ export default function HistoryPage() {
                 return (
                   <div
                     key={item.id}
+                    className="motion-card-float-in"
                     style={{
+                      animationDelay: `${idx * 0.05}s`,
                       background: 'var(--color-white, #FFFFFF)',
                       border: '1px solid var(--color-border, #E2E8F0)',
                       borderRadius: '20px',
@@ -500,6 +509,7 @@ export default function HistoryPage() {
                       boxShadow: '0 4px 14px rgba(0,0,0,0.04)',
                       display: 'flex',
                       flexDirection: 'column',
+                      transition: 'transform 0.25s, box-shadow 0.25s',
                     }}
                   >
                     <div style={{ position: 'relative', height: '200px', background: '#F1F5F9' }}>

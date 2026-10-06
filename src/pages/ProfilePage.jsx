@@ -142,7 +142,7 @@ export default function ProfilePage() {
         
         {/* Left Card */}
         <div>
-          <div className="profile-card" role="region" aria-label="Informasi akun">
+          <div className="profile-card motion-fade-slide-up" role="region" aria-label="Informasi akun">
             <div className="profile-card-top">
               <div className="profile-avatar-big" id="profile-initials" aria-hidden="true">
                 {initials}
@@ -193,14 +193,14 @@ export default function ProfilePage() {
                 Bantuan & FAQ
               </div>
               <div className="divider"></div>
-              <button className="profile-menu-item danger" onClick={handleChangePassword} role="menuitem" aria-label="Ganti kata sandi">
+              <button className="profile-menu-item danger interactive-tap" onClick={handleChangePassword} role="menuitem" aria-label="Ganti kata sandi">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
                 Ganti Kata Sandi
               </button>
-              <button className="profile-menu-item danger" onClick={() => setShowLogoutConfirm(true)} role="menuitem" aria-label="Keluar dari akun">
+              <button className="profile-menu-item danger interactive-tap" onClick={() => setShowLogoutConfirm(true)} role="menuitem" aria-label="Keluar dari akun">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                   <polyline points="16 17 21 12 16 7" />
@@ -213,7 +213,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Right column: Settings panels */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+        <div className="motion-fade-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', animationDelay: '0.1s' }}>
           {/* Info Akun */}
           <section className="settings-section" id="info-section" aria-labelledby="info-title">
             <div className="settings-section-header">
@@ -258,7 +258,7 @@ export default function ProfilePage() {
                         <option value="admin">Manajer Tanaman</option>
                 </select>
               </div>
-              <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} disabled={saving}>
+              <button type="submit" className="btn btn-primary interactive-tap" style={{ alignSelf: 'flex-start' }} disabled={saving}>
                 {saving ? (
                   <>
                     <span className="spinner" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white', width: '16px', height: '16px' }}></span>

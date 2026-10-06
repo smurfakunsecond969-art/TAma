@@ -815,15 +815,15 @@
 
 .reveal {
   opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transform: translateY(24px) scale(0.98);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .reveal.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
-/* ── Entrance — dibuka segera agar LCP cepat ── */
+/* ── Entrance — The Pulse Motion ── */
 .landing-body .hero-eyebrow,
 .landing-body .hero-title,
 .landing-body .hero-desc,
@@ -832,8 +832,7 @@
   opacity: 1;
   transform: none;
 }
-/* Hero tidak pernah disembunyikan (opacity:0) saat splash — menahan paint
-   LCP. Splash ditampilkan sebagai overlay fixed non-blocking di atas. */
+
 .landing-body.is-loading .hero-eyebrow,
 .landing-body.is-loading .hero-title,
 .landing-body.is-loading .hero-desc,
@@ -842,16 +841,11 @@
   opacity: 1;
   transform: none;
 }
-.landing-body.is-loaded .hero-eyebrow { animation: heroEntrance 0.5s var(--ease-float) 0.02s backwards; }
-.landing-body.is-loaded .hero-title   { animation: heroEntrance 0.5s var(--ease-float) 0.05s backwards; }
-.landing-body.is-loaded .hero-desc    { animation: heroEntrance 0.5s var(--ease-float) 0.1s backwards; }
-.landing-body.is-loaded .hero-cta     { animation: heroEntrance 0.5s var(--ease-float) 0.15s backwards; }
-.landing-body.is-loaded .hero-visual  { animation: heroEntrance 0.5s var(--ease-float) 0.08s backwards; }
-
-@keyframes heroEntrance {
-  from { opacity: 0; transform: translateY(26px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+.landing-body.is-loaded .hero-eyebrow { animation: fade-slide-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.04s backwards; }
+.landing-body.is-loaded .hero-title   { animation: fade-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.12s backwards; }
+.landing-body.is-loaded .hero-desc    { animation: fade-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.22s backwards; }
+.landing-body.is-loaded .hero-cta     { animation: fade-slide-up 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.32s backwards; }
+.landing-body.is-loaded .hero-visual  { animation: card-float-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.18s backwards; }
 
 /* Logo spin animation — elegan, industri-standar */
 @keyframes logo-spin-glow {

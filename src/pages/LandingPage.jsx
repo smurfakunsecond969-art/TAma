@@ -103,6 +103,21 @@ export default function LandingPage() {
       {/* ── Hero Section ── */}
       <section className="hero" id="hero" aria-labelledby="hero-headline">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.20)_0%,_rgba(20,184,166,0.08)_50%,_transparent_70%)] pointer-events-none -z-10" aria-hidden="true" />
+        
+        {/* 2 Ambient blobs drifting smoothly */}
+        <div style={{
+          position: 'absolute', top: 40, left: '6%', width: 340, height: 340,
+          background: 'radial-gradient(circle, rgba(29, 158, 117, 0.12) 0%, transparent 70%)',
+          borderRadius: '50%', pointerEvents: 'none', zIndex: 0,
+          animation: 'ambient-drift 10s ease-in-out infinite alternate',
+        }} aria-hidden="true" />
+        <div style={{
+          position: 'absolute', top: 120, right: '8%', width: 300, height: 300,
+          background: 'radial-gradient(circle, rgba(59, 139, 247, 0.10) 0%, transparent 70%)',
+          borderRadius: '50%', pointerEvents: 'none', zIndex: 0,
+          animation: 'ambient-drift 12s ease-in-out infinite alternate-reverse',
+        }} aria-hidden="true" />
+
         <div className="hero-bg"></div>
 
         <div className="hero-contour" aria-hidden="true">

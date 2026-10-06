@@ -132,8 +132,7 @@
   will-change: transform;
 }
 .plant-card.is-in {
-  animation:
-    dashRise 0.55s var(--ease-float) var(--d, 0s) both;
+  animation: card-float-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0s) both;
 }
 .plant-card:hover {
   animation: none;
@@ -791,6 +790,14 @@ input[type="range"]::-webkit-slider-thumb {
 }
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.15);
+}
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 6px rgba(29, 158, 117, 0.2);
+}
+input[type="range"]::-moz-range-thumb:active {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 6px rgba(29, 158, 117, 0.2);
 }
 
 /* Sticky form card */

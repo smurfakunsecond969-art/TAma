@@ -87,7 +87,15 @@ function GardenTotalRadialChart({ score, hasData }) {
 
   return (
     <div style={{ position: 'relative', width: 220, height: 200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg width="220" height="220" viewBox="0 0 220 220" style={{ transform: 'rotate(135deg)', overflow: 'visible' }}>
+      {/* Decorative breathing aura ring */}
+      <div style={{
+        position: 'absolute', width: 196, height: 196, borderRadius: '50%',
+        border: `2px solid ${grade.color}35`,
+        animation: 'taku-breathe 2.8s ease-in-out infinite',
+        boxShadow: `0 0 18px ${grade.color}20`,
+        pointerEvents: 'none',
+      }} />
+      <svg width="220" height="220" viewBox="0 0 220 220" style={{ transform: 'rotate(135deg)', overflow: 'visible', position: 'relative', zIndex: 1 }}>
         {/* Background track */}
         <circle
           cx="110"
@@ -121,7 +129,7 @@ function GardenTotalRadialChart({ score, hasData }) {
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        paddingTop: 14,
+        paddingTop: 14, zIndex: 2,
       }}>
         <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>
           {hasData && score !== null ? animatedScore : '–'}
@@ -148,8 +156,31 @@ const DISEASE_PALETTE = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', 
 function DiseaseDonutChart({ data }) {
   const canvasRef = useRef(null);
   const [hoverIndex, setHoverIndex] = useState(null);
+  const [animProgress, setAnimProgress] = useState(0);
 
   const total = useMemo(() => data.reduce((acc, curr) => acc + curr.count, 0), [data]);
+
+  useEffect(() => {
+    let start = null;
+    let frameId = null;
+    const duration = 850;
+    const step = (ts) => {
+      if (!start) start = ts;
+      const elapsed = ts - start;
+      const p = Math.min(1, elapsed / duration);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setAnimProgress(ease);
+      if (p < 1) {
+        frameId = requestAnimationFrame(step);
+      } else {
+        setAnimProgress(1);
+      }
+    };
+    frameId = requestAnimationFrame(step);
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+    };
+  }, [data]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -175,7 +206,7 @@ function DiseaseDonutChart({ data }) {
 
     data.forEach((item, i) => {
       const isHovered = hoverIndex === i;
-      const sliceAngle = (item.count / total) * 2 * Math.PI;
+      const sliceAngle = (item.count / total) * 2 * Math.PI * animProgress;
       const r = isHovered ? outerR + 4 : outerR;
 
       ctx.beginPath();
@@ -204,12 +235,12 @@ function DiseaseDonutChart({ data }) {
     ctx.font = 'bold 20px Plus Jakarta Sans, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(total, cx, cy - 6);
+    ctx.fillText(Math.round(total * animProgress), cx, cy - 6);
 
     ctx.font = '10px Plus Jakarta Sans, sans-serif';
     ctx.fillStyle = '#64748B';
     ctx.fillText('Kasus Terdata', cx, cy + 12);
-  }, [data, total, hoverIndex]);
+  }, [data, total, hoverIndex, animProgress]);
 
   if (!data || data.length === 0) {
     return (

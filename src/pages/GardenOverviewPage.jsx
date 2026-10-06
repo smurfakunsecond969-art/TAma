@@ -34,6 +34,7 @@ function formatRelativeTime(minutes) {
 
 function MoistureComparisonChart({ plants, sortMode }) {
   const canvasRef = useRef(null);
+  const [animProgress, setAnimProgress] = useState(0);
 
   const sortedPlants = useMemo(() => {
     const list = [...plants].filter(p => p.moisture !== null && p.moisture !== undefined);
@@ -46,6 +47,28 @@ function MoistureComparisonChart({ plants, sortMode }) {
       return Math.abs(a.moisture - midA) - Math.abs(b.moisture - midB);
     });
   }, [plants, sortMode]);
+
+  useEffect(() => {
+    let start = null;
+    let frameId = null;
+    const duration = 800;
+    const step = (ts) => {
+      if (!start) start = ts;
+      const elapsed = ts - start;
+      const p = Math.min(1, elapsed / duration);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setAnimProgress(ease);
+      if (p < 1) {
+        frameId = requestAnimationFrame(step);
+      } else {
+        setAnimProgress(1);
+      }
+    };
+    frameId = requestAnimationFrame(step);
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+    };
+  }, [sortedPlants]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -94,7 +117,7 @@ function MoistureComparisonChart({ plants, sortMode }) {
       const cx = padL + colW * i + colW / 2;
       const x = cx - barW / 2;
       const pct = Math.min(100, Math.max(0, p.moisture || 0));
-      const barH = (pct / 100) * chartH;
+      const barH = (pct / 100) * chartH * animProgress;
       const y = padT + chartH - barH;
       const min = p.moistureMin || 40;
       const max = p.moistureMax || 80;
@@ -140,7 +163,7 @@ function MoistureComparisonChart({ plants, sortMode }) {
       ctx.fillStyle = color;
       ctx.font = 'bold 11px Plus Jakarta Sans, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${pct}%`, cx, Math.max(padT + 12, y - 6));
+      ctx.fillText(`${Math.round(pct * animProgress)}%`, cx, Math.max(padT + 12, y - 6));
 
       // Label below (Emoji + Name)
       ctx.font = '14px serif';
@@ -874,7 +897,7 @@ export default function GardenOverviewPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
-            {plants.map(plant => {
+            {plants.map((plant, idx) => {
               const score = plant.healthScore;
               const scoreCol = getConditionColorHex(plant.conditionColor);
               const isWatering = wateringId === plant.id;
@@ -883,11 +906,13 @@ export default function GardenOverviewPage() {
               return (
                 <div
                   key={plant.id}
+                  className="motion-card-float-in"
                   style={{
+                    animationDelay: `${idx * 0.05}s`,
                     background: '#FFFFFF', borderRadius: 20, border: '1.5px solid #E2E8F0',
                     padding: '1.25rem', boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
                     display: 'flex', flexDirection: 'column', gap: '0.85rem',
-                    transition: 'transform 0.15s, box-shadow 0.15s',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

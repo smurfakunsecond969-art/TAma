@@ -344,7 +344,7 @@ export default function TakuChatPage() {
                     gap: '12px',
                     maxWidth: isUser ? '78%' : '84%',
                     alignSelf: isUser ? 'flex-end' : 'flex-start',
-                    animation: 'dashRise 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+                    animation: 'card-float-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both',
                   }}
                 >
                   {/* Avatar Taku */}
@@ -474,7 +474,7 @@ export default function TakuChatPage() {
                 alignItems: 'center',
                 gap: '12px',
                 alignSelf: 'flex-start',
-                animation: 'dashRise 0.25s ease-out both',
+                animation: 'card-float-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both',
               }}
             >
               <div
@@ -490,7 +490,7 @@ export default function TakuChatPage() {
                   padding: '3px',
                   flexShrink: 0,
                   boxShadow: '0 4px 12px rgba(29,158,117,0.2)',
-                  animation: 'takuPulseGlow 2s infinite',
+                  animation: 'taku-breathe 3s ease-in-out infinite',
                 }}
               >
                 <img
@@ -527,7 +527,7 @@ export default function TakuChatPage() {
                       height: '6px',
                       borderRadius: '50%',
                       background: '#1D9E75',
-                      animation: 'takuPulseGlow 1s infinite 0s',
+                      animation: 'typing-bounce 1.2s infinite 0s',
                     }}
                   />
                   <span
@@ -536,7 +536,7 @@ export default function TakuChatPage() {
                       height: '6px',
                       borderRadius: '50%',
                       background: '#1D9E75',
-                      animation: 'takuPulseGlow 1s infinite 0.2s',
+                      animation: 'typing-bounce 1.2s infinite 0.15s',
                     }}
                   />
                   <span
@@ -545,7 +545,7 @@ export default function TakuChatPage() {
                       height: '6px',
                       borderRadius: '50%',
                       background: '#1D9E75',
-                      animation: 'takuPulseGlow 1s infinite 0.4s',
+                      animation: 'typing-bounce 1.2s infinite 0.3s',
                     }}
                   />
                 </span>
@@ -574,6 +574,7 @@ export default function TakuChatPage() {
             <button
               key={i}
               type="button"
+              className="interactive-tap"
               onClick={() => handleSendMessage(p.text)}
               disabled={sending}
               style={{
@@ -589,11 +590,11 @@ export default function TakuChatPage() {
                 alignItems: 'center',
                 gap: '6px',
                 flexShrink: 0,
-                transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
               onMouseEnter={(e) => {
                 if (!sending) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.025)';
                   e.currentTarget.style.borderColor = '#1D9E75';
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(29,158,117,0.15)';
                 }
@@ -681,7 +682,7 @@ export default function TakuChatPage() {
             type="button"
             onClick={() => handleSendMessage()}
             disabled={sending || !inputMessage.trim()}
-            className="btn btn-primary"
+            className="btn btn-primary interactive-tap"
             style={{
               borderRadius: '14px',
               padding: '12px 20px',

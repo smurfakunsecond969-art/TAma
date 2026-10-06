@@ -102,7 +102,7 @@ export default function AdminApprovalPage() {
             Setujui, tolak, atau ubah role akun yang mendaftar.
           </p>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={load} title="Refresh">
+        <button className="btn btn-ghost btn-sm interactive-tap" onClick={load} title="Refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
@@ -117,13 +117,14 @@ export default function AdminApprovalPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
+            className="interactive-tap"
             style={{
               padding: '8px 18px', borderRadius: 'var(--radius-full)',
               fontWeight: 600, fontSize: 'var(--font-size-sm)', cursor: 'pointer',
               border: tab === t.key ? `2px solid ${t.color}` : '2px solid var(--color-border)',
               background: tab === t.key ? `${t.color}18` : 'var(--color-white)',
               color: tab === t.key ? t.color : 'var(--color-text-muted)',
-              transition: 'all 0.15s ease',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
             {t.label}
@@ -132,7 +133,7 @@ export default function AdminApprovalPage() {
       </div>
 
       {/* Table Card */}
-      <div className="card card-flat" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card card-flat motion-card-float-in" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
             <span className="spinner" style={{ width: '28px', height: '28px', borderColor: 'var(--color-border)', borderTopColor: 'var(--color-primary)' }} />
@@ -172,7 +173,7 @@ export default function AdminApprovalPage() {
                   return (
                     <tr key={u.id} style={{
                       borderBottom: '1px solid var(--color-border-soft)',
-                      transition: 'background 0.1s ease',
+                      transition: 'background 0.15s ease',
                     }}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-primary-ghost)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = ''}
@@ -241,16 +242,20 @@ export default function AdminApprovalPage() {
 
                       {/* Status */}
                       <td style={{ padding: '14px 20px' }}>
-                        <span style={{
-                          padding: '3px 10px', borderRadius: 'var(--radius-full)',
-                          fontSize: 'var(--font-size-xs)', fontWeight: 600,
-                          background: u.approvalStatus === 'approved' ? 'var(--color-primary-pale)'
-                            : u.approvalStatus === 'rejected' ? 'var(--color-danger-pale)'
-                            : 'var(--color-warning-pale)',
-                          color: u.approvalStatus === 'approved' ? 'var(--color-primary-dark)'
-                            : u.approvalStatus === 'rejected' ? 'var(--color-danger)'
-                            : 'var(--color-warning)',
-                        }}>
+                        <span
+                          className={u.approvalStatus === 'pending' ? 'motion-pulse-glow' : ''}
+                          style={{
+                            display: 'inline-block',
+                            padding: '3px 10px', borderRadius: 'var(--radius-full)',
+                            fontSize: 'var(--font-size-xs)', fontWeight: 600,
+                            background: u.approvalStatus === 'approved' ? 'var(--color-primary-pale)'
+                              : u.approvalStatus === 'rejected' ? 'var(--color-danger-pale)'
+                              : 'var(--color-warning-pale)',
+                            color: u.approvalStatus === 'approved' ? 'var(--color-primary-dark)'
+                              : u.approvalStatus === 'rejected' ? 'var(--color-danger)'
+                              : 'var(--color-warning)',
+                          }}
+                        >
                           {u.approvalStatus === 'approved' ? 'Disetujui'
                             : u.approvalStatus === 'rejected' ? 'Ditolak'
                             : 'Menunggu'}
@@ -270,7 +275,7 @@ export default function AdminApprovalPage() {
                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap' }}>
                             {u.approvalStatus !== 'approved' && (
                               <button
-                                className="btn btn-xs"
+                                className="btn btn-xs interactive-tap"
                                 onClick={() => handleApprove(u)}
                                 disabled={busy}
                                 style={{ background: 'var(--color-primary)', color: 'white', borderRadius: 'var(--radius-full)' }}
@@ -281,7 +286,7 @@ export default function AdminApprovalPage() {
                             )}
                             {u.approvalStatus !== 'rejected' && (
                               <button
-                                className="btn btn-xs"
+                                className="btn btn-xs interactive-tap"
                                 onClick={() => setRejectTarget(u)}
                                 disabled={busy}
                                 style={{ background: 'var(--color-danger-pale)', color: 'var(--color-danger)', borderRadius: 'var(--radius-full)' }}

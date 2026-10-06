@@ -399,6 +399,7 @@ export default function PlantDetailPage() {
                       background: plant.conditionColor === 'red' ? '#FEF2F2' : plant.conditionColor === 'yellow' ? '#FFFBEB' : '#ECFDF5',
                       color: plant.conditionColor === 'red' ? '#DC2626' : plant.conditionColor === 'yellow' ? '#D97706' : '#059669',
                       border: `1px solid ${plant.conditionColor === 'red' ? '#FCA5A5' : plant.conditionColor === 'yellow' ? '#FDE68A' : '#A7F3D0'}`,
+                      animation: plant.conditionColor === 'red' ? 'pulse-glow 1.8s ease-in-out infinite' : 'none',
                     }}>
                       Skor: {plant.healthScore}/100 ({plant.conditionLabel || 'Sehat'})
                     </span>
@@ -473,12 +474,14 @@ export default function PlantDetailPage() {
                   setIsCameraOpen(true);
                 }}
                 disabled={analyzing}
+                className="interactive-tap"
                 style={{
                   padding: '0.6rem 1.15rem', borderRadius: 12,
                   background: 'linear-gradient(135deg, #7E22CE, #9333EA)',
                   color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.85rem',
                   cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
                   boxShadow: '0 2px 8px rgba(147,51,234,0.3)',
+                  animation: analyzing ? 'none' : 'taku-breathe 3s ease-in-out infinite',
                 }}
               >
                 {analyzing ? (
@@ -517,8 +520,16 @@ export default function PlantDetailPage() {
               </h3>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ position: 'relative', width: 110, height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="110" height="110" viewBox="0 0 110 110" style={{ transform: 'rotate(-90deg)' }}>
+                <div style={{ position: 'relative', width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {/* Decorative breathing aura ring */}
+                  <div style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    border: `2px solid ${mColor}35`,
+                    animation: 'taku-breathe 2.8s ease-in-out infinite',
+                    boxShadow: `0 0 16px ${mColor}20`,
+                    pointerEvents: 'none',
+                  }} />
+                  <svg width="110" height="110" viewBox="0 0 110 110" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
                     <circle cx="55" cy="55" r={r} fill="none" stroke="#F1F5F9" strokeWidth="10" />
                     <circle
                       cx="55" cy="55" r={r} fill="none" stroke={mColor} strokeWidth="10"
@@ -526,7 +537,7 @@ export default function PlantDetailPage() {
                       style={{ transition: 'stroke-dasharray 1s ease' }}
                     />
                   </svg>
-                  <div style={{ position: 'absolute', textAlign: 'center' }}>
+                  <div style={{ position: 'absolute', textAlign: 'center', zIndex: 2 }}>
                     <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A' }}>
                       {hasMoisture ? `${plant.moisture}%` : '–'}
                     </div>
@@ -757,7 +768,7 @@ export default function PlantDetailPage() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
-              {photos.map((item) => {
+              {photos.map((item, idx) => {
                 const isAi = item.is_analysis_photo;
                 const hasAnalysis = Boolean(item.analysis);
                 const statusColor = item.analysis?.status === 'sehat'
@@ -769,10 +780,13 @@ export default function PlantDetailPage() {
                 return (
                   <div
                     key={item.id}
+                    className="motion-card-float-in"
                     style={{
+                      animationDelay: `${idx * 0.06}s`,
                       borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden',
                       background: '#FFFFFF', boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
                       display: 'flex', flexDirection: 'column',
+                      transition: 'transform 0.25s, box-shadow 0.25s',
                     }}
                   >
                     <div style={{ position: 'relative', height: 160, background: '#F1F5F9' }}>

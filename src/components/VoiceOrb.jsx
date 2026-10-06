@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { waterPlantApi } from '../services/plantService';
+import { speakText } from '../services/takuAiService';
 
 export default function VoiceOrb() {
   const { plants, showToast, loadPlants } = useApp();
@@ -54,18 +55,6 @@ export default function VoiceOrb() {
 
     recognitionRef.current = rec;
   }, [plants]);
-
-  // Fungsi Text-To-Speech (TTS)
-  const speakText = (text) => {
-    if ('speechSynthesis' in window) {
-      // Cancel speech yang sedang berjalan agar tidak tumpang tindih
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'id-ID';
-      utterance.rate = 1.0;
-      window.speechSynthesis.speak(utterance);
-    }
-  };
 
   // Mencocokkan frasa suara
   const handleVoiceCommand = async (command) => {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Layout from '../components/Layout';
 import { waterPlantApi, fetchGardenAnalyticsApi } from '../services/plantService';
+import CountUp from '../components/CountUp';
 import '../css/app.css';
 
 // ── Helpers Penilaian Skor Kebun (100% Identik dengan GardenAnalyticsPage) ──
@@ -312,7 +313,7 @@ export default function DashboardPage() {
 
         {/* ── 2. Hero Indeks Kesehatan Kebun Banner ── */}
         <div
-          className="hero-garden-card"
+          className={`hero-garden-card motion-fade-slide-up ${gardenScore !== null && gardenScore < 50 ? 'motion-pulse-urgent' : ''}`}
           style={{
             background: theme === 'dark'
               ? 'linear-gradient(135deg, #111e19 0%, #162c23 100%)'
@@ -323,11 +324,12 @@ export default function DashboardPage() {
             marginBottom: 24, position: 'relative', overflow: 'hidden',
           }}
         >
-          {/* Ambient subtle glow ring */}
+          {/* Ambient subtle glow ring with ambient-drift */}
           <div style={{
             position: 'absolute', top: -30, right: -30, width: 180, height: 180,
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, transparent 70%)',
             borderRadius: '50%', pointerEvents: 'none',
+            animation: 'ambient-drift 8s ease-in-out infinite alternate',
           }} />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24, alignItems: 'center' }}>
@@ -353,7 +355,7 @@ export default function DashboardPage() {
                 </svg>
                 <div style={{ position: 'absolute', textAlign: 'center' }}>
                   <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--color-text)', lineHeight: 1 }}>
-                    {hasAnyData && gardenScore !== null ? gardenScore : '--'}
+                    <CountUp to={hasAnyData && gardenScore !== null ? gardenScore : null} duration={900} fallback="--" />
                   </div>
                   <div style={{ fontSize: '0.62rem', color: 'var(--color-text-muted)', fontWeight: 800, marginTop: 2 }}>SKOR</div>
                 </div>
@@ -387,21 +389,21 @@ export default function DashboardPage() {
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>Total Tanaman</div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--color-text)', marginTop: 2 }}>
-                  {totalPlants} Pohon
+                  <CountUp to={totalPlants} duration={850} suffix=" Pohon" />
                 </div>
                 <div style={{ fontSize: '0.68rem', color: '#10B981', fontWeight: 600 }}>Terdaftar</div>
               </div>
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>Kelembaban Rata²</div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3B8BF7', marginTop: 2 }}>
-                  {avgMoisture !== null ? `${avgMoisture}%` : '--'}
+                  <CountUp to={avgMoisture} duration={900} suffix="%" fallback="--" />
                 </div>
                 <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>Sensor Tanah</div>
               </div>
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>Koneksi IoT</div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10B981', marginTop: 2 }}>
-                  {totalPlants - noSensorCount}/{totalPlants}
+                  <CountUp to={totalPlants - noSensorCount} duration={800} />/{totalPlants}
                 </div>
                 <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>Unit Aktif</div>
               </div>
@@ -425,7 +427,7 @@ export default function DashboardPage() {
           >
             <button
               onClick={() => setActiveFilter('all')}
-              className={`segmented-filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+              className={`segmented-filter-btn interactive-tap ${activeFilter === 'all' ? 'active' : ''}`}
               style={{
                 padding: '6px 14px', borderRadius: 10, border: 'none',
                 background: activeFilter === 'all' ? 'var(--color-card)' : 'transparent',
@@ -440,7 +442,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setActiveFilter('healthy')}
-              className={`segmented-filter-btn ${activeFilter === 'healthy' ? 'active' : ''}`}
+              className={`segmented-filter-btn interactive-tap ${activeFilter === 'healthy' ? 'active' : ''}`}
               style={{
                 padding: '6px 14px', borderRadius: 10, border: 'none',
                 background: activeFilter === 'healthy' ? 'var(--color-card)' : 'transparent',
@@ -455,7 +457,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setActiveFilter('warning')}
-              className={`segmented-filter-btn ${activeFilter === 'warning' ? 'active' : ''}`}
+              className={`segmented-filter-btn interactive-tap ${activeFilter === 'warning' ? 'active' : ''}`}
               style={{
                 padding: '6px 14px', borderRadius: 10, border: 'none',
                 background: activeFilter === 'warning' ? 'var(--color-card)' : 'transparent',
@@ -471,7 +473,7 @@ export default function DashboardPage() {
             {noSensorCount > 0 && (
               <button
                 onClick={() => setActiveFilter('no_sensor')}
-                className={`segmented-filter-btn ${activeFilter === 'no_sensor' ? 'active' : ''}`}
+                className={`segmented-filter-btn interactive-tap ${activeFilter === 'no_sensor' ? 'active' : ''}`}
                 style={{
                   padding: '6px 14px', borderRadius: 10, border: 'none',
                   background: activeFilter === 'no_sensor' ? 'var(--color-card)' : 'transparent',
@@ -616,6 +618,7 @@ export default function DashboardPage() {
                             fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.45rem',
                             borderRadius: 8, background: condStyle.bg, color: condStyle.text,
                             border: `1px solid ${condStyle.border}`, flexShrink: 0,
+                            animation: plant.condition === 'kritis' ? 'pulse-glow 1.8s ease-in-out infinite' : 'none',
                           }}>
                             {condStyle.label}
                           </span>
@@ -683,12 +686,15 @@ export default function DashboardPage() {
                         </span>
                       </div>
 
-                      {/* Progress bar with min-max thresholds */}
-                      <div style={{
-                        height: 8, width: '100%', background: 'var(--color-surface)',
-                        borderRadius: 8, overflow: 'hidden', position: 'relative',
-                        border: '1px solid var(--color-border-soft)',
-                      }}>
+                      {/* Progress bar with shimmer-wrap overlay */}
+                      <div
+                        className="shimmer-wrap"
+                        style={{
+                          height: 8, width: '100%', background: 'var(--color-surface)',
+                          borderRadius: 8, overflow: 'hidden', position: 'relative',
+                          border: '1px solid var(--color-border-soft)',
+                        }}
+                      >
                         <div
                           style={{
                             height: '100%',

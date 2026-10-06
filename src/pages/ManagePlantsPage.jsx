@@ -210,8 +210,12 @@ export default function ManagePlantsPage() {
                 </p>
               </div>
             ) : (
-              plants.map((plant) => (
-                <div className="plant-list-item" key={plant.id}>
+              plants.map((plant, idx) => (
+                <div
+                  className="plant-list-item motion-card-float-in"
+                  key={plant.id}
+                  style={{ animationDelay: `${idx * 0.05}s` }}
+                >
                   <div className="plant-list-icon" style={{ overflow: 'hidden' }}>
                     {plant.latestPhoto?.url ? (
                       <img
@@ -310,7 +314,7 @@ export default function ManagePlantsPage() {
           </div>
         ) : (
           /* Role worker/admin: form penuh */
-          <div className="form-card" role="complementary" aria-label="Form tambah atau edit tanaman">
+          <div key={editingId || 'new'} className="form-card motion-fade-slide-up" role="complementary" aria-label="Form tambah atau edit tanaman">
             <div className="form-card-header">
               <h3>{editingId ? 'Edit Data Tanaman' : 'Registrasi Tanaman Baru'}</h3>
               <p>

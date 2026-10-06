@@ -1042,6 +1042,51 @@ p  { color: var(--color-text-sub); line-height: 1.7; }
   display: block;
 }
 
+/* ============================================================
+   THE PULSE — Motion Language System (Tanamanku Canonical)
+   ============================================================ */
+
+@keyframes fade-slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-float-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.15); }
+}
+
+@keyframes pulse-urgent {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.35); }
+  50%      { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+}
+
+@keyframes shimmer-sweep {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(340%); }
+}
+
+@keyframes ambient-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(24px, 18px) scale(1.08); }
+}
+
+@keyframes taku-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.045); }
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+/* 1. Breathing Animation */
 @keyframes breathe {
   0%, 100% {
     transform: scale(1);
@@ -1054,7 +1099,7 @@ p  { color: var(--color-text-sub); line-height: 1.7; }
   }
 }
 .pulse-breathe {
-  animation: breathe var(--duration-pulse) var(--ease-pulse) infinite;
+  animation: taku-breathe var(--duration-pulse, 3.2s) var(--ease-pulse, ease-in-out) infinite;
 }
 
 /* 2. Floating Animation */
@@ -1067,7 +1112,7 @@ p  { color: var(--color-text-sub); line-height: 1.7; }
   }
 }
 .ambient-float {
-  animation: float var(--duration-float) var(--ease-float) infinite;
+  animation: float var(--duration-float, 4s) var(--ease-float, ease-in-out) infinite;
 }
 
 /* 3. Drift Background Blobs */
@@ -1083,7 +1128,7 @@ p  { color: var(--color-text-sub); line-height: 1.7; }
   }
 }
 .ambient-drift {
-  animation: drift var(--duration-drift) var(--ease-drift) infinite;
+  animation: ambient-drift var(--duration-drift, 8s) ease-in-out infinite alternate;
 }
 
 /* 4. Sonar Expanding Ring */
@@ -1102,7 +1147,24 @@ p  { color: var(--color-text-sub); line-height: 1.7; }
   border: 2px solid var(--color-primary);
   border-radius: 50%;
   pointer-events: none;
-  animation: sonar var(--duration-sonar) var(--ease-sonar) infinite;
+  animation: sonar var(--duration-sonar, 2s) var(--ease-sonar, ease-out) infinite;
+}
+
+/* Utility Pulse Classes */
+.motion-fade-slide-up {
+  animation: fade-slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.motion-card-float-in {
+  animation: card-float-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.motion-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+.motion-pulse-urgent {
+  animation: pulse-urgent 1.8s ease-in-out infinite;
+}
+.motion-taku-breathe {
+  animation: taku-breathe 3s ease-in-out infinite;
 }
 
 /* Shimmer Progress bar overlay */
@@ -1120,29 +1182,28 @@ p  { color: var(--color-text-sub); line-height: 1.7; }
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.35) 50%,
     rgba(255, 255, 255, 0) 100%
   );
-  transform: translateX(-100%);
-  animation: shimmer-sweep 2.5s infinite;
+  transform: translateX(-120%);
+  animation: shimmer-sweep 3s ease-in-out infinite;
+  pointer-events: none;
 }
-@keyframes shimmer-sweep {
-  100% {
-    transform: translateX(100%);
-  }
+
+/* Micro-interaction on pressable buttons / pills */
+.interactive-tap {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.interactive-tap:active {
+  transform: scale(0.96) !important;
 }
 
 /* Accessibility: Fallback for reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .pulse-breathe,
-  .ambient-float,
-  .ambient-drift,
-  .sonar-ring,
-  .shimmer-wrap::after,
-  .fx-particle {
-    animation: none !important;
-    transform: none !important;
-    opacity: 1 !important;
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }
 
