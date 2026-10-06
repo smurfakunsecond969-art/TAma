@@ -335,7 +335,7 @@ export default function DashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24, alignItems: 'center' }}>
             
             {/* Left: Overall Garden Health Index Ring */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div data-taku="garden-score" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
               <div style={{
                 position: 'relative', width: 88, height: 88, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -380,6 +380,7 @@ export default function DashboardPage() {
             {/* Right: Telemetry Grid (Total Tanaman, Kelembaban, Koneksi IoT) */}
             <div
               className="telemetry-card"
+              data-taku="telemetry"
               style={{
                 display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12,
                 background: 'var(--color-card)', padding: '16px 20px', borderRadius: 18,
@@ -567,6 +568,7 @@ export default function DashboardPage() {
                 <div
                   key={plant.id}
                   className="plant-card is-in"
+                  data-taku-plant={plant.id}
                   onClick={() => navigate(`/plant-detail?id=${plant.id}`)}
                   role="listitem"
                   style={{

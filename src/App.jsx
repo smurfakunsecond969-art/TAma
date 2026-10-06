@@ -22,6 +22,7 @@ const TakuChatPage       = lazy(() => import('./pages/TakuChatPage'));
 
 // Import CSS Design system
 import './css/style.css';
+import './css/taku-hud.css';
 
 // Fallback minimal saat lazy chunk sedang didownload
 function PageLoader() {

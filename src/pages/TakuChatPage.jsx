@@ -623,6 +623,7 @@ export default function TakuChatPage() {
           }}
         >
           <div
+            data-taku="chat-input"
             style={{
               flex: 1,
               background: theme === 'dark' ? '#0D1A15' : '#F6FAF8',

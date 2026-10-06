@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import TakuAssistant from './TakuAssistant';
+import TakuHUD from './taku/TakuHUD';
 import LoadingScreen from './LoadingScreen';
 import NotificationPanel from './NotificationPanel';
 
@@ -222,6 +223,7 @@ export default function Layout({ children, title }) {
               {/* Theme Toggle Button */}
               <button
                 className="btn btn-ghost btn-icon theme-toggle-btn"
+                data-taku="theme-toggle"
                 aria-label={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
                 title={theme === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap'}
                 onClick={() => toggleTheme()}
@@ -376,6 +378,9 @@ export default function Layout({ children, title }) {
         </div>
       </nav>
       
+      {/* Taku HUD (grid, spotlight, subtitle, kursor hantu, boot) */}
+      <TakuHUD />
+
       {/* Taku AI Active Assistant Orb */}
       <TakuAssistant />
     </div>

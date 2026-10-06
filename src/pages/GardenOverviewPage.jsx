@@ -876,7 +876,9 @@ export default function GardenOverviewPage() {
             </div>
           </div>
 
-          <MoistureComparisonChart plants={plants} sortMode={moistureSort} />
+          <div data-taku="moisture-chart">
+            <MoistureComparisonChart plants={plants} sortMode={moistureSort} />
+          </div>
         </div>
 
         {/* ── 4. Kartu Semua Tanaman (Aksi Cepat) ── */}

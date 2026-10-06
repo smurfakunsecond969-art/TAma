@@ -28,6 +28,10 @@ import {
   computeGardenReportData,
 } from '../services/reportTemplates';
 import { speakText as takuSpeakText, stopSpeech } from '../services/takuAiService';
+import { useTakuState, getTakuState, setTakuState, runtime } from '../services/takuStore';
+import { answerConfirm, stopScenes } from '../services/takuDirector';
+import { startGardenReport, startPresentation } from '../services/takuScripts';
+import TakuCore from './taku/TakuCore';
 
 // Route map - nama dari AI -> path react-router
 const ROUTE_MAP = {
@@ -174,6 +178,24 @@ export default function TakuAssistant() {
   const bubbleTimer    = useRef(null);
   const synthRef       = useRef(window.speechSynthesis);
 
+  const tk = useTakuState();
+
+  // Director berjalan di luar React; beri ia referensi terbaru ke fungsi aplikasi.
+  useEffect(() => {
+    runtime.navigate = navigate;
+    runtime.plants = plants;
+    runtime.user = user;
+    runtime.theme = theme;
+    runtime.showToast = showToast;
+    runtime.toggleTheme = toggleTheme;
+    runtime.loadPlants = loadPlants;
+  });
+
+  // Cerminkan fase lokal ke store (kecuali Director yang sedang memegang kendali)
+  useEffect(() => {
+    if (!getTakuState().presenting) setTakuState({ phase });
+  }, [phase]);
+
   const speakText = useCallback((text, preset = 'normal') => {
     if (!('speechSynthesis' in window)) return;
     takuSpeakText(text, preset, {
@@ -198,7 +220,7 @@ export default function TakuAssistant() {
     speakText(text, preset);
   }, [showBubble, speakText]);
 
-  // Sapaan baru 1x per sesi login (Opsi A — Jarvis Style)
+  // Boot sequence + sapaan, baru 1x per sesi login (Opsi A — Jarvis Style)
   useEffect(() => {
     if (!user) return;
     const alreadyGreeted = sessionStorage.getItem('taku_greeted');
@@ -206,10 +228,11 @@ export default function TakuAssistant() {
     sessionStorage.setItem('taku_greeted', 'true');
     const firstName = (user.name || 'Sahabat').split(' ')[0];
     const greeting = `Selamat datang, ${firstName}. Sistem aktif, semua sensor terhubung. Saya Taku, siap bantu apa pun yang kamu butuhkan di kebun hari ini.`;
-    const timer = setTimeout(() => {
-      speakAndShow(greeting, 'greeting');
-    }, 1200);
-    return () => clearTimeout(timer);
+    setTakuState({ booting: true });
+    // Sengaja tanpa cleanup: Layout di-mount ulang saat pindah halaman,
+    // dan boot tidak boleh tertinggal menyala.
+    setTimeout(() => setTakuState({ booting: false }), 3000);
+    setTimeout(() => speakAndShow(greeting, 'greeting'), 3200);
   }, [user, speakAndShow]);
 
   // Setup Web Speech Recognition
@@ -335,12 +358,27 @@ export default function TakuAssistant() {
   const tryLocalFastPath = useCallback(async (transcript) => {
     const lower = transcript.toLowerCase().trim();
 
-    // 1. Laporan
+    // 0. Jawaban konfirmasi (ya / tidak) saat Taku sedang menunggu
+    if (getTakuState().confirm) {
+      if (/\b(ya|iya|boleh|oke|ok|siram|lanjut|tentu)\b/.test(lower)) { answerConfirm(true); return true; }
+      if (/\b(tidak|nggak|enggak|jangan|nanti|batal)\b/.test(lower)) { answerConfirm(false); return true; }
+    }
+
+    // 0b. Hentikan Taku
+    if (getTakuState().presenting && /\b(stop|berhenti|diam|cukup|hentikan)\b/.test(lower)) {
+      stopScenes();
+      return true;
+    }
+
+    // 0c. Mode presentasi
+    if (lower.includes('presentasi') || lower.includes('demo lengkap') || lower.includes('perkenalkan diri')) {
+      startPresentation();
+      return true;
+    }
+
+    // 1. Laporan — Taku berkeliling aplikasi sambil menjelaskan
     if (lower.includes('laporan') || lower.includes('kondisi kebun') || lower.includes('status kebun') || lower.includes('kondisi tanaman') || lower.includes('status tanaman') || lower.includes('bagaimana kebun')) {
-      navigate('/garden');
-      const repData = computeGardenReportData(plants);
-      const text = buildGardenReportText(repData);
-      speakAndShow(text, 'report');
+      startGardenReport();
       return true;
     }
 
@@ -497,9 +535,10 @@ export default function TakuAssistant() {
 
   useEffect(() => () => { if (bubbleTimer.current) clearTimeout(bubbleTimer.current); }, []);
 
-  const isListening  = phase === 'listening';
-  const isProcessing = phase === 'processing';
-  const isSpeaking   = phase === 'speaking';
+  const ph           = tk.presenting ? tk.phase : phase;
+  const isListening  = ph === 'listening';
+  const isProcessing = ph === 'processing';
+  const isSpeaking   = ph === 'speaking';
   const isActive     = isListening || isProcessing || isSpeaking;
 
   const ringColor = isListening ? '#3B8BF7' : isProcessing ? '#F5A623' : '#1D9E75';
@@ -517,7 +556,7 @@ export default function TakuAssistant() {
       <div style={{ position: 'fixed', bottom: '84px', right: '20px', zIndex: 1100, fontFamily: 'var(--font-family)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
 
         {/* Response bubble */}
-        {bubble && (
+        {bubble && !tk.presenting && (
           <div style={{ background: 'var(--color-card, #fff)', border: '1px solid var(--color-border, #DCF0E9)', borderRadius: '16px', borderBottomRightRadius: '4px', padding: '10px 14px', maxWidth: '270px', fontSize: '13px', lineHeight: 1.5, color: 'var(--color-text)', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', animation: bubbleOut ? 'taku-bubble-out 0.35s ease forwards' : 'taku-bubble-in 0.3s ease both' }}>
             <span style={{ fontWeight: 700, color: '#1D9E75', fontSize: '11px', display: 'block', marginBottom: '3px', letterSpacing: '0.04em' }}>TAKU AI</span>
             {bubble}
@@ -542,9 +581,10 @@ export default function TakuAssistant() {
           <div style={{ background: 'var(--color-card, #fff)', border: '1px solid var(--color-border, #DCF0E9)', borderRadius: '14px', padding: '8px', width: '244px', boxShadow: '0 8px 28px rgba(0,0,0,0.14)', display: 'flex', flexDirection: 'column', gap: '4px', animation: 'taku-bubble-in 0.25s ease both' }}>
             <div style={{ padding: '6px 8px', fontWeight: 700, fontSize: '11px', color: '#1D9E75', borderBottom: '1px solid var(--color-border-soft, #EDF7F3)', letterSpacing: '0.08em' }}>MENU TAKU AI</div>
             {[
+              { label: '🎬 Mulai Presentasi',   cmd: 'mulai presentasi' },
+              { label: '🛰️ Laporan Keliling',   cmd: 'berikan laporan kebun saya' },
               { label: 'Ke Dashboard',     cmd: 'pindah ke dashboard' },
               { label: 'Ke Kebun Saya',    cmd: 'pindah ke kebun saya' },
-              { label: 'Laporan Kebun',    cmd: 'berikan laporan kebun saya' },
               { label: 'Ke Riwayat',       cmd: 'pindah ke riwayat' },
               { label: 'Kondisi Tanaman',  cmd: 'bagaimana kondisi tanaman saya' },
               { label: theme === 'dark' ? '☀️ Ubah ke Mode Terang' : '🌙 Ubah ke Mode Gelap', cmd: theme === 'dark' ? 'mode terang' : 'mode gelap' },
@@ -582,6 +622,8 @@ export default function TakuAssistant() {
 
         {/* Tombol Taku AI Container with Sonar Rings */}
         <div style={{ position: 'relative' }}>
+          {/* Taku Core: ring HUD yang selalu hidup (idle) dan berdenyut saat bicara */}
+          <TakuCore phase={ph} pulse={tk.pulse} size={134} />
           {/* Sonar Rings saat aktif */}
           {isActive && (
             <>

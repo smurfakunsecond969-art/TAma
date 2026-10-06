@@ -520,7 +520,7 @@ export default function PlantDetailPage() {
               </h3>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ position: 'relative', width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div data-taku="moisture-gauge" style={{ position: 'relative', width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {/* Decorative breathing aura ring */}
                   <div style={{
                     position: 'absolute', inset: 0, borderRadius: '50%',

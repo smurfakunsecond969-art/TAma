@@ -33,6 +33,7 @@ export const VOICE_PRESETS = {
   normal:   { rate: 1.0,  pitch: 1.0  }, // Nada standar asistensi
   urgent:   { rate: 1.08, pitch: 0.95 }, // Lebih cepat & tegas buat kondisi kritis
   report:   { rate: 0.98, pitch: 1.0  }, // Jelas & terstruktur untuk laporan kebun
+  jarvis:   { rate: 0.96, pitch: 0.92 }, // Tenang, rendah, berwibawa untuk narasi HUD
 };
 
 /**
@@ -63,7 +64,7 @@ export function speakText(text, presetOrOptions = 'normal', maybeOptions = {}) {
     utter.onboundary = (e) => {
       if (e.name === 'word') {
         const w = text.substring(e.charIndex, e.charIndex + (e.charLength || 8)).trim();
-        if (w) options.onWord(w);
+        if (w) options.onWord(w, e.charIndex, e.charLength || w.length);
       }
     };
   }
