@@ -39,12 +39,20 @@ export function CoreSvg() {
  */
 export default function TakuCore({ phase = 'idle', pulse = 0, size = 130, style }) {
   const beat = phase === 'speaking' ? 1 + (pulse % 2) * 0.07 : 1;
-  const offset = -(size - 78) / 2;
   return (
     <div
       className="taku-core"
       data-phase={phase}
-      style={{ width: size, height: size, left: offset, top: offset, transform: `scale(${beat})`, ...style }}
+      style={{
+        position: 'absolute',
+        width: size,
+        height: size,
+        top: '50%',
+        left: '50%',
+        transform: `translate(-50%, -50%) scale(${beat})`,
+        pointerEvents: 'none',
+        ...style,
+      }}
     >
       <CoreSvg />
     </div>

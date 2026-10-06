@@ -534,7 +534,7 @@ export default function PlantDetailPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1rem' }}>
                 <div data-taku="moisture-gauge" style={{ position: 'relative', width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {/* JARVIS Holographic Calibration Reticle & Radar Sweep */}
-                  <JarvisReticle size={148} color={mColor} radar={true} />
+                  <JarvisReticle size={148} color="#00FF87" radar={true} />
 
                   {/* Decorative breathing aura ring */}
                   <div style={{

@@ -343,7 +343,7 @@ export default function DashboardPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 {/* JARVIS Rotating Reticle & Radar Sweep */}
-                <JarvisReticle size={114} color={gardenGrade.color} radar={true} />
+                <JarvisReticle size={114} color="#00FF87" radar={true} />
 
                 <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
                   <circle cx="44" cy="44" r="36" stroke="var(--color-border)" strokeWidth="8" fill="none" />

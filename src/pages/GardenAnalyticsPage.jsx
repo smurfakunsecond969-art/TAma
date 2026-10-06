@@ -87,13 +87,19 @@ function GardenTotalRadialChart({ score, hasData }) {
   const strokeDashoffset = arcLength - ((hasData ? animatedScore : 0) / 100) * arcLength;
 
   return (
-    <div style={{ position: 'relative', width: 220, height: 200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'relative', width: 220, height: 220, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {/* JARVIS Calibration Reticle & Radar Sweep */}
-      <JarvisReticle size={206} color={grade.color} radar={true} />
+      <JarvisReticle size={206} color="#00FF87" radar={true} />
 
       {/* Decorative breathing aura ring */}
       <div style={{
-        position: 'absolute', width: 196, height: 196, borderRadius: '50%',
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 196,
+        height: 196,
+        borderRadius: '50%',
         border: `2px solid ${grade.color}35`,
         animation: 'taku-breathe 2.8s ease-in-out infinite',
         boxShadow: `0 0 18px ${grade.color}20`,

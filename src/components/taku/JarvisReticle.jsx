@@ -23,7 +23,9 @@ export default function JarvisReticle({
       className="jarvis-reticle-container"
       style={{
         position: 'absolute',
-        inset: `-${(size - 88) / 2}px`,
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
         width: `${size}px`,
         height: `${size}px`,
         pointerEvents: 'none',
@@ -37,11 +39,13 @@ export default function JarvisReticle({
         <div
           style={{
             position: 'absolute',
-            inset: `${center - rMiddle}px`,
+            top: `${center - rMiddle}px`,
+            left: `${center - rMiddle}px`,
             width: `${rMiddle * 2}px`,
             height: `${rMiddle * 2}px`,
             borderRadius: '50%',
             background: `conic-gradient(from 0deg, transparent 65%, rgba(0, 255, 135, 0.28) 100%)`,
+            transformOrigin: 'center center',
             animation: 'jarvis-radar-sweep 8s linear infinite',
             pointerEvents: 'none',
           }}
