@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import '../css/landing.css';
 
 export default function LandingPage() {
-  const { landingSeen, markLandingSeen } = useApp();
+  const { landingSeen, markLandingSeen, theme, toggleTheme } = useApp();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(!landingSeen);
@@ -55,8 +55,8 @@ export default function LandingPage() {
   };
 
   return (
-    <div className={`landing-body bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/70 via-slate-50/50 to-white relative overflow-hidden${loading ? ' is-loading' : ' is-loaded'}`}>
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.20)_0%,_rgba(20,184,166,0.08)_50%,_transparent_70%)] pointer-events-none -z-10" />
+    <div className={`landing-body relative overflow-hidden${loading ? ' is-loading' : ' is-loaded'}`}>
+      <div className="landing-top-glow absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] pointer-events-none -z-10" />
       {loading && (
         <LoadingScreen label="Memuat platform tanaman anda..." onComplete={handleLoadingComplete} />
       )}
@@ -76,6 +76,31 @@ export default function LandingPage() {
           <a href="#contact" role="listitem" onClick={(e) => handleAnchorClick(e, '#contact')}>Instalasi</a>
         </div>
         <div className="nav-actions">
+          {/* Theme Toggle Button */}
+          <button
+            className="landing-theme-toggle"
+            aria-label={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+            title={theme === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap'}
+            onClick={() => toggleTheme()}
+          >
+            {theme === 'dark' ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" fill="#F59E0B" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            )}
+          </button>
           <Link to="/login" className="btn btn-ghost btn-sm">Masuk</Link>
           <Link to="/register" className="btn btn-primary btn-sm lp-btn-lux bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white font-bold shadow-[0_8px_20px_-4px_rgba(16,185,129,0.45)] hover:shadow-[0_12px_28px_-2px_rgba(16,185,129,0.65)] hover:scale-[1.02] active:scale-95 transition-all duration-100 ease-out transform-gpu will-change-transform">Mulai Gratis</Link>
         </div>
@@ -95,6 +120,16 @@ export default function LandingPage() {
           <a href="#account-steps" onClick={(e) => { handleAnchorClick(e, '#account-steps'); setMobileMenuOpen(false); }}>Cara Buat Akun</a>
           <a href="#features" onClick={(e) => { handleAnchorClick(e, '#features'); setMobileMenuOpen(false); }}>Fitur AI</a>
           <a href="#contact" onClick={(e) => { handleAnchorClick(e, '#contact'); setMobileMenuOpen(false); }}>Instalasi</a>
+          <div className="mobile-theme-row">
+            <span>Tema ({theme === 'dark' ? 'Mode Gelap' : 'Mode Terang'})</span>
+            <button
+              className="landing-theme-toggle"
+              aria-label={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+              onClick={() => toggleTheme()}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+          </div>
           <Link to="/login" className="btn btn-outline btn-sm" style={{justifyContent:'center'}} onClick={() => setMobileMenuOpen(false)}>Masuk</Link>
           <Link to="/register" className="btn btn-primary btn-sm lp-btn-lux bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white font-bold shadow-[0_8px_20px_-4px_rgba(16,185,129,0.45)] hover:shadow-[0_12px_28px_-2px_rgba(16,185,129,0.65)] hover:scale-[1.02] active:scale-95 transition-all duration-100 ease-out transform-gpu will-change-transform" style={{justifyContent:'center'}} onClick={() => setMobileMenuOpen(false)}>Mulai Gratis</Link>
         </div>
@@ -130,7 +165,7 @@ export default function LandingPage() {
 
         <div className="hero-inner">
           <div className="hero-content">
-            <div className="hero-eyebrow bg-emerald-50/90 border border-emerald-300 text-emerald-700 font-semibold shadow-[0_2px_12px_rgba(16,185,129,0.2)] rounded-full px-4 py-1.5" aria-label="Tag produk">
+            <div className="hero-eyebrow" aria-label="Tag produk">
               <span className="eyebrow-dot" aria-hidden="true"></span>
               Pertanian Cerdas Berbasis IoT
             </div>
@@ -145,7 +180,7 @@ export default function LandingPage() {
               <Link to="/register" className="btn btn-primary btn-lg hero-cta-btn bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white font-bold shadow-[0_8px_20px_-4px_rgba(16,185,129,0.45)] hover:shadow-[0_12px_28px_-2px_rgba(16,185,129,0.65)] hover:scale-[1.02] active:scale-95 transition-all duration-100 ease-out transform-gpu will-change-transform">
                 Mulai Sekarang
               </Link>
-              <Link to="/login" className="btn btn-outline btn-lg hero-cta-btn bg-white border-2 border-emerald-500/80 text-emerald-700 font-semibold hover:bg-emerald-50/60 hover:border-emerald-600 transition-all duration-100 ease-out transform-gpu">Masuk Akun</Link>
+              <Link to="/login" className="btn btn-outline btn-lg hero-cta-btn hero-cta-secondary transition-all duration-100 ease-out transform-gpu">Masuk Akun</Link>
             </div>
           </div>
 
@@ -153,8 +188,8 @@ export default function LandingPage() {
             <div className="hero-illustration-wrap min-h-[350px]">
               <div className="hero-illustration">
                 <svg viewBox="0 0 480 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="480" height="420" rx="24" fill="#F2FBF7" />
-                  <ellipse cx="240" cy="360" rx="200" ry="40" fill="#E1F5EE" />
+                  <rect width="480" height="420" rx="24" className="hero-ill-bg" fill="#F2FBF7" />
+                  <ellipse cx="240" cy="360" rx="200" ry="40" className="hero-ill-ground" fill="#E1F5EE" />
                   <path d="M40 340 Q120 300 200 330 Q280 300 360 330 Q430 310 440 340 L440 400 L40 400 Z" fill="#9FE1CB" opacity="0.5" />
                   <path d="M60 355 Q140 325 220 345 Q300 315 380 345 L380 400 L60 400 Z" fill="#1D9E75" opacity="0.25" />
 
@@ -230,8 +265,8 @@ export default function LandingPage() {
                   <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                 </svg>
                 <div>
-                  <div style={{ fontSize: '11px', color: '#6B8C80', fontWeight: 500 }}>Kelembaban Tanah</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#1D9E75' }}>Sensor Real-time</div>
+                  <div className="hero-float-sub">Kelembaban Tanah</div>
+                  <div className="hero-float-val">Sensor Real-time</div>
                 </div>
               </div>
             </div>
@@ -242,8 +277,8 @@ export default function LandingPage() {
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
                 <div>
-                  <div style={{ fontSize: '11px', color: '#6B8C80', fontWeight: 500 }}>Analisa AI</div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#7E22CE' }}>Deteksi Dini Penyakit</div>
+                  <div className="hero-float-sub">Analisa AI</div>
+                  <div className="hero-float-val hero-float-ai">Deteksi Dini Penyakit</div>
                 </div>
               </div>
             </div>
@@ -251,8 +286,8 @@ export default function LandingPage() {
               <div className="hero-float-inner">
                 <span style={{ fontSize: '18px' }}>&#127795;</span>
                 <div>
-                  <div style={{ fontSize: '11px', color: '#6B8C80', fontWeight: 500 }}>Memory Pohon</div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#1D9E75' }}>Riwayat &amp; Insight</div>
+                  <div className="hero-float-sub">Memory Pohon</div>
+                  <div className="hero-float-val">Riwayat &amp; Insight</div>
                 </div>
               </div>
             </div>
@@ -261,7 +296,7 @@ export default function LandingPage() {
 
         <div className="hero-wave" aria-hidden="true">
           <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-            <path d="M0,40 Q360,80 720,40 T1440,40 L1440,80 L0,80 Z" fill="#F6FAF8" />
+            <path d="M0,40 Q360,80 720,40 T1440,40 L1440,80 L0,80 Z" fill="currentColor" />
           </svg>
         </div>
       </section>
